@@ -43,23 +43,32 @@ def test_timeout(cluster):
     snakemake_cmd = pytest.snakemake_cmd.format(
         workdir=str(data), snakefile=str(data.join("Snakefile")))
     options = [" --cluster ", "\" sbatch -p normal -n 1 ",
-               "-t 0:{resources.runtime}\" -j 2"]
+               "-t 0:{resources.runtime}\" -j 2  --jn timeout-{jobid}"]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
     with pytest.raises(TimeOut):
         with Timer() as t:
             container.exec_run(cmd, user="user")
+    options = [" --unlock"]
+    cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
+    container.exec_run(cmd, user="user")
 
 
-def test_profile_no_timeout(cluster):
+def test_no_timeout(cluster):
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
         workdir=str(data), snakefile=str(data.join("Snakefile")))
-    options = [" -j 1 -F foo.txt"]
+    options = [" -j 1 -F foo.txt --jn no_timeout-{jobid}"]
     options += ["--profile {}".format(str(data.join("slurm")))]
-    #options += ["--time {resources.runtime}"]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
+    allres = ""
     for res in container.exec_run(cmd, user="user", stream=True):
         print(res.decode())
+        allres += res.decode()
+    assert "Trying to restart" in allres
+    assert "Finished job" in allres
+    options = [" --unlock"]
+    cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
+    container.exec_run(cmd, user="user")
 
 
 def test_profile_status_running(cluster):
@@ -67,7 +76,7 @@ def test_profile_status_running(cluster):
     snakemake_cmd = pytest.snakemake_cmd.format(
         workdir=str(data), snakefile=str(data.join("Snakefile")))
     options = [" --cluster ", "\" sbatch -p normal -n 1 ",
-               "-t 0:20\" -j 1 -F foo.txt"]
+               "-t 1\" -j 1 -F foo.txt --jn running-{jobid}"]
     options += ["--profile {}".format(str(data.join("slurm")))]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
     container.exec_run(cmd, user="user", detach=True)
@@ -79,13 +88,19 @@ def test_profile_status_running(cluster):
                 str(data.join("slurm/slurm-status.py")), jid),
                                       stream=True):
             assert res.decode().strip() == "running"
+    options = [" --unlock"]
+    cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
+    container.exec_run(cmd, user="user")
 
 
 def test_slurm_submit(cluster):
     container, data = cluster
+    jobscript = data.join("jobscript.sh")
+    jobscript.write("#!/bin/bash\n# properties = {}")
     cmd_args = [pytest.path, " && ",
                 str(data.join("slurm").join("slurm-submit.py")), "--wrap",
-                "\"sleep 10\""]
+                "\"sleep 10\"", str(jobscript)]
     cmd = "/bin/bash -c '{}'".format(" ".join(cmd_args))
-    for res in container.exec_run(cmd, stream=True):
-        print(res.decode())
+    container.exec_run(cmd)
+    res = container.exec_run("squeue -h -o \"%.j\"")
+    assert "wrap" in res.decode()

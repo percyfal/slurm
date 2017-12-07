@@ -3,15 +3,16 @@ rule all:
 
 rule timeout:
     resources:
-        runtime = lambda wildcards, attempt: 10**(attempt - 1) * 5
+        runtime = lambda wildcards, attempt: 2**(attempt - 1) * 1
     output: "foo.txt"
+    threads: 2
     shell:
         "echo foo > {output};"
-        "sleep 20"
+        "sleep 80"
 
 rule bar:
     resources:
-        runtime = 5
+        runtime = 1
     output: "bar.txt"
     shell:
         "echo bar > {output}"
