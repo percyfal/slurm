@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
     "--help", help="Display help message.", action="store_true")
 parser.add_argument(
-    "positional arguments", action="append",
+    "positional", action="append",
     nargs="?", metavar="POS",
     help="additional arguments not in slurm parser group to pass to sbatch")
 
@@ -77,11 +77,12 @@ arg_dict = dict(args.__dict__)
 # Process resources
 if "resources" in job_properties:
     resources = job_properties["resources"]
-    if "runtime" in resources:
-        arg_dict["time"] = resources["runtime"]
-    elif "walltime" in resources:
-        arg_dict["time"] = resources["runtime"]
-    if "mem" in resources:
+    if arg_dict["time"] is None:
+        if "runtime" in resources:
+            arg_dict["time"] = resources["runtime"]
+        elif "walltime" in resources:
+            arg_dict["time"] = resources["runtime"]
+    if "mem" in resources and arg_dict["mem"] is None:
         arg_dict["mem"] = resources["mem"]
 
 # Threads
@@ -91,7 +92,6 @@ if "threads" in job_properties:
 # Set default partition
 if arg_dict["partition"] is None:
     arg_dict["partition"] = "{{cookiecutter.partition}}"
-
 
 opt_keys = ["array", "account", "begin", "cpus_per_task",
             "depedency", "workdir", "error", "job_name", "mail_type",
@@ -104,9 +104,10 @@ for k, v in arg_dict.items():
     if v is not None:
         opts += " --{} \"{}\" ".format(k, v)
 
-
-cmd = "sbatch {opts} {extras}".format(
-    opts=opts, extras=extras)
+if arg_dict["wrap"] is not None:
+    cmd = "sbatch {opts}".format(opts=opts)
+else:
+    cmd = "sbatch {opts} {extras}".format(opts=opts, extras=extras)
 
 try:
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
