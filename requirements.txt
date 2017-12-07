@@ -1,0 +1,10 @@
+cookiecutter
+
+# Testing
+docker-py
+snakemake
+pytest
+pytest-runner
+pep8
+pytest-cookies
+pyflakes

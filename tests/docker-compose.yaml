@@ -1,0 +1,35 @@
+version: '3'
+services:
+  snakemake:
+    image: {snakemake_tag}
+    hostname: ernie
+    command: /bin/bash
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1000M
+        reservations:
+          cpus: '0.5'
+          memory: 1000M
+    tty: true
+    stdin_open: true
+    working_dir: /tmp
+    volumes:
+      - usr:/usr/
+  slurm:
+    image: giovtorres/docker-centos7-slurm:latest
+    hostname: ernie
+    stdin_open: true
+    tty: true
+    working_dir: /tmp
+    environment:
+      SNAKEMAKE_PATH: "/opt/local/bin"
+      LC_ALL: en_GB.utf8
+      LANG: en_GB.utf8
+    volumes:
+      - usr:/opt/
+      - /tmp:/tmp
+
+volumes:
+  usr:

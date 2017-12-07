@@ -1,0 +1,4 @@
+{
+    "partition": ["core", "node", "devel", "normal", "debug"],
+    "profile_name": "slurm"
+}

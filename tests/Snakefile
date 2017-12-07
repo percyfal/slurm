@@ -1,0 +1,17 @@
+rule all:
+    input: ["foo.txt", "bar.txt"]
+
+rule timeout:
+    resources:
+        runtime = lambda wildcards, attempt: 10**(attempt - 1) * 5
+    output: "foo.txt"
+    shell:
+        "echo foo > {output};"
+        "sleep 20"
+
+rule bar:
+    resources:
+        runtime = 5
+    output: "bar.txt"
+    shell:
+        "echo bar > {output}"
