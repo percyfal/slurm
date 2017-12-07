@@ -53,7 +53,7 @@ def pytest_namespace():
         'snakemake_cmd': " ".join(
             ["export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
              " && snakemake ", "-d {workdir} ",
-             " -s {snakefile} "]),
+             " -s {snakefile} -p "]),
         'path': "export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
         'template': ROOT_DIR,
     }
@@ -191,7 +191,7 @@ def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
     output_factory = tmpdir_factory.mktemp
     c = Cookies(template, output_factory, _cookiecutter_config_file)
     c._new_output_dir = lambda: str(p)
-    cc = c.bake()
+    c.bake(extra_context={'partition': 'normal'})
     return p
 
 
