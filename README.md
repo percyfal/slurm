@@ -8,11 +8,11 @@ This profile configures Snakemake to run on the [SLURM Workload Manager](https:/
 
 To deploy this profile, change to your desired **working directory** and run
 
-    cookiecutter https://github.com/percyfal/snakemake_slurm_profile.git
+	cookiecutter https://github.com/Snakemake-Profiles/slurm.git
 
 Then, you can run Snakemake with
 
-    snakemake --profile slurm ...
+	snakemake --profile slurm ...
 
 
 ### Resources
