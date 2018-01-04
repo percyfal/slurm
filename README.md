@@ -12,7 +12,7 @@ To deploy this profile, change to your desired **working directory** and run
 
 Then, you can run Snakemake with
 
-    snakemake --profile slurm ...
+	snakemake --profile slurm ...
 
 
 ### Resources
