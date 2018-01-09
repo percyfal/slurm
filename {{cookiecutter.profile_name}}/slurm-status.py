@@ -14,7 +14,7 @@ jobid = sys.argv[1]
 for i in range(STATUS_ATTEMPTS):
     try:
         sacct_res = sp.check_output(shlex.split("sacct -P -b -j {} -n".format(jobid)))
-        res = {x.split("|")[0]: x.split("|")[1] for x in sacct_res.decode().split("\n")}
+        res = {x.split("|")[0]: x.split("|")[1] for x in sacct_res.decode().strip().split("\n")}
         break
     except sp.CalledProcessError as e:
         logger.error("sacct process error")
