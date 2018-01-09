@@ -74,6 +74,20 @@ def add_slurm_user(user, container):
         raise
 
 
+def setup_sacctmgr(container):
+    try:
+        cmd_args = [
+            "/bin/bash -c 'sacctmgr --immediate add cluster name=linux ; ",
+            "supervisorctl restart slurmdbd;",
+            "supervisorctl restart slurmctld;",
+            "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\"'"
+        ]
+        cmd = " ".join(cmd_args)
+        container.exec_run(cmd, detach=False, stream=False, user="root")
+    except:
+        raise
+
+
 def get_snakemake_quay_tag():
     import requests
     try:
@@ -202,6 +216,7 @@ def cluster(slurm, snakemake, data):
     container = [c for c in client.containers.list()
                  if c.name.startswith(SLURM_SERVICE)][0]
     add_slurm_user(pytest.local_user_id, container)
+    setup_sacctmgr(container)
     # Hack: modify first line in snakemake file
     container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:",
                         "/opt/local/bin/snakemake"])
