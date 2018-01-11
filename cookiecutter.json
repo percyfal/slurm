@@ -1,4 +1,4 @@
 {
-    "partition": "slurm",
+    "partition": "",
     "profile_name": "slurm"
 }
