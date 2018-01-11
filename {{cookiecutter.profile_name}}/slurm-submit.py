@@ -89,14 +89,21 @@ if "resources" in job_properties:
 if "threads" in job_properties:
     arg_dict["ntasks"] = job_properties["threads"]
 
-# Set default partition
-if arg_dict["partition"] is None:
-    arg_dict["partition"] = "{{cookiecutter.partition}}"
-
 opt_keys = ["array", "account", "begin", "cpus_per_task",
             "depedency", "workdir", "error", "job_name", "mail_type",
             "mail_user", "ntasks", "nodes", "output", "partition",
             "quiet", "time", "wrap", "constraint", "mem"]
+
+# Set default partition
+if arg_dict["partition"] is None:
+    if "{{cookiecutter.partition}}" == "slurm-default":
+        # partitions and SLURM - If not specified, the default behavior is to
+        # allow the slurm controller to select the default partition as
+        # designated by the system administrator.
+        opt_keys.remove("partition")
+    else:
+        arg_dict["partition"] = "{{cookiecutter.partition}}"
+
 opts = ""
 for k, v in arg_dict.items():
     if k not in opt_keys:
