@@ -1,4 +1,4 @@
 {
-    "partition": "",
+    "partition": "slurm-default",
     "profile_name": "slurm"
 }
