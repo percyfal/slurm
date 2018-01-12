@@ -2,7 +2,7 @@
 import re
 import pytest
 
-PARTITION_RE = re.compile("^\s+arg_dict\[\"partition\"\]\s+=\s+\"(.+)\"$",
+PARTITION_RE = re.compile("^\s+arg_dict\[\"partition\"\]\s+=\s+\"(.*)\"$",
                           flags=re.MULTILINE)
 
 
@@ -21,7 +21,7 @@ def test_default_partition(cookies):
     submit_lines = "".join(submit.readlines())
     m = PARTITION_RE.search(submit_lines)
     partition = m.group(1)
-    assert partition == "core"
+    assert partition == ""
 
 
 def test_normal_partition(cookies):
