@@ -96,7 +96,7 @@ opt_keys = ["array", "account", "begin", "cpus_per_task",
 
 # Set default partition
 if arg_dict["partition"] is None:
-    if "{{cookiecutter.partition}}" == "slurm-default":
+    if not "{{cookiecutter.partition}}":
         # partitions and SLURM - If not specified, the default behavior is to
         # allow the slurm controller to select the default partition as
         # designated by the system administrator.
