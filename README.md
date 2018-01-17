@@ -19,8 +19,8 @@ Then, you can run Snakemake with
 
 The following resources are supported by on a per-rule bassis:
 
-**mem** - set the memory resource request.
-**walltime**, **runtime** - set the walltime/runtime resource.
+**mem** - set the memory resource request in mb.
+**walltime**, **runtime** - set the time resource in min.
 
 
 ## Tests
