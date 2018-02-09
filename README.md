@@ -8,7 +8,10 @@ This profile configures Snakemake to run on the [SLURM Workload Manager](https:/
 
 To deploy this profile, change to your desired **working directory** and run
 
-	cookiecutter https://github.com/Snakemake-Profiles/slurm.git
+```sh
+# cd ~/.config/snakemake (or your project-specific directory)
+cookiecutter https://github.com/Snakemake-Profiles/slurm.git
+```
 
 Then, you can run Snakemake with
 
