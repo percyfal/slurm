@@ -147,14 +147,21 @@ def get_images(name, tag=None):
 
 def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
     logger.info("Deploying stack {}".format(name))
+    client = docker.from_env()
     res = sp.check_output(shlex.split('docker stack ls'))
     stacks = [s.split(" ")[0] for s in res.decode().split("\n")]
     # Add config variable to disable redeployment
     if name in stacks:
         logger.info("Stack {} already deployed".format(name))
-        client = docker.from_env()
-        clist = [c for c in client.containers.list()
-                 if c.name.startswith(SLURM_SERVICE)]
+        try:
+            container = [c for c in client.containers.list()
+                         if c.name.startswith(SLURM_SERVICE)][0]
+            res = container.exec_run("scontrol show slurmd")
+            if res.decode().startswith("scontrol: error:"):
+                raise Exception("scontrol error")
+        except Exception as e:
+            logger.warning("Stack is up but no slurm service available")
+            raise e
     else:
         # Implicitly assumes docker swarm init has been run
         sp.check_output(
@@ -162,16 +169,17 @@ def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
         # Need to wait for containers to come up
         logger.info("Verifying that stack has been initialized")
         for i in range(STATUS_ATTEMPTS):
-            client = docker.from_env()
-            clist = [c for c in client.containers.list()
-                     if c.name.startswith(SLURM_SERVICE)]
-            if len(clist) > 0:
+            try:
+                container = [c for c in client.containers.list()
+                             if c.name.startswith(SLURM_SERVICE)][0]
+                res = container.exec_run("scontrol show slurmd")
+                if res.decode().startswith("scontrol: error:"):
+                    raise Exception("scontrol error")
                 break
-            logger.info("Stack inactive; retrying, attempt {}".format(i+1))
-            time.sleep(3)
-    # slurm needs some additional time to wake up
-    time.sleep(3)
-    return clist[0]
+            except Exception as e:
+                logger.info("Stack inactive; retrying, attempt {}".format(i+1))
+                time.sleep(3)
+    return container
 
 
 def stack_rm(name=DOCKER_STACK_NAME):
