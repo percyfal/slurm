@@ -2,7 +2,7 @@ cookiecutter
 
 # Testing
 docker-py
-snakemake
+snakemake==4.6.0
 pytest
 pytest-runner
 pep8
