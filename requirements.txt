@@ -1,7 +1,7 @@
 cookiecutter
 
 # Testing
-docker-py
+docker>=2.7.0
 snakemake==4.6.0
 pytest
 pytest-runner
