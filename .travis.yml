@@ -15,8 +15,8 @@ services:
 
 before_install:
   - docker pull giovtorres/docker-centos7-slurm:latest
-  - docker pull quay.io/biocontainers/snakemake:4.6.0--py35_0
-  - docker pull quay.io/biocontainers/snakemake:4.6.0--py36_0
+  - if [ $(python -c 'import sys; print(sys.version_info[:][1])') == 5 ]; then docker pull quay.io/biocontainers/snakemake:4.6.0--py35_0; fi
+  - if [ $(python -c 'import sys; print(sys.version_info[:][1])') == 6 ]; then docker pull quay.io/biocontainers/snakemake:4.6.0--py36_0; fi
   - docker swarm init
 
 install:
