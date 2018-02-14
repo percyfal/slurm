@@ -43,6 +43,7 @@ SLURM_IMAGE = "giovtorres/docker-centos7-slurm"
 SNAKEMAKE_IMAGE = "quay.io/biocontainers/snakemake"
 SNAKEMAKE_BASETAG = "{}--{}".format(SNAKEMAKE_VERSION, PYTHON_VERSION)
 
+
 # Snakefile for test
 SNAKEFILE = py.path.local(os.path.join(os.path.dirname(__file__), "Snakefile"))
 
@@ -97,7 +98,7 @@ def get_snakemake_quay_tag():
     except:
         logger.error("couldn't complete requests for quay.io")
         raise
-    r = re.compile("{}--{}".format(SNAKEMAKE_BASETAG, PYTHON_VERSION))
+    r = re.compile(SNAKEMAKE_BASETAG)
     # TODO: verify that tags are sorted by build date; if so we need
     # to verify that they are sorted in descending version order
     for t in tags:
@@ -108,14 +109,14 @@ def get_snakemake_quay_tag():
 
 
 def get_snakemake_image():
-    images = get_images(SNAKEMAKE_IMAGE)
+    images = get_images(SNAKEMAKE_IMAGE, SNAKEMAKE_BASETAG)
     client = docker.from_env()
     if len(images) == 0:
         tag = get_snakemake_quay_tag()
         img = SNAKEMAKE_IMAGE + ":" + str(tag)
         logger.info("pulling image {}".format(img))
         client.images.pull(img)
-        images = get_images(SNAKEMAKE_IMAGE)
+        images = get_images(SNAKEMAKE_IMAGE, SNAKEMAKE_BASETAG)
     return images[0]
 
 
@@ -129,13 +130,16 @@ def get_slurm_image():
     return images[0]
 
 
-def get_images(name):
+def get_images(name, tag=None):
     client = docker.from_env()
     images = client.images.list()
     matches = []
     for img in images:
         for repo in img.attrs["RepoDigests"]:
             if repo.startswith(name):
+                if tag is not None:
+                    if not any(t.startswith("{}:{}".format(name, tag)) for t in img.tags):
+                        continue
                 matches.append(img)
     return list(set(matches))
 
@@ -183,7 +187,6 @@ def snakemake():
 @pytest.fixture(scope="session")
 def docker_compose(slurm, snakemake):
     tag = snakemake.tags[0]
-    print(tag)
     # Docker compose template for test
     COMPOSE_TEMPLATE = os.path.join(os.path.dirname(__file__),
                                     "docker-compose.yaml")

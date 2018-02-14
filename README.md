@@ -8,8 +8,8 @@ This profile configures Snakemake to run on the [SLURM Workload Manager](https:/
 
 To deploy this profile, run
 
-        mkdir -p ~/.config/snakemake
-        cd ~/.config/snakemake
+	mkdir -p ~/.config/snakemake
+	cd ~/.config/snakemake
 	cookiecutter https://github.com/Snakemake-Profiles/slurm.git
 
 Then, you can run Snakemake with
@@ -19,10 +19,10 @@ Then, you can run Snakemake with
 
 ### Resources
 
-The following resources are supported by on a per-rule bassis:
+The following resources are supported by on a per-rule basis:
 
-**mem** - set the memory resource request in mb.
-**walltime**, **runtime** - set the time resource in min.
+- **mem**: set the memory resource request in mb.
+- **walltime**, **runtime**: set the time resource in min.
 
 
 ## Tests
