@@ -17,6 +17,7 @@ before_install:
   - docker pull giovtorres/docker-centos7-slurm:latest
   - docker pull quay.io/biocontainers/snakemake:4.6.0--py35_0
   - docker pull quay.io/biocontainers/snakemake:4.6.0--py36_0
+  - docker swarm init
 
 install:
   - pip install -r requirements.txt
