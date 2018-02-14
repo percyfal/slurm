@@ -23,6 +23,7 @@ logger = logging.getLogger("cookiecutter-slurm")
 
 ROOT_DIR = py.path.local(os.path.dirname(__file__)).join(os.pardir)
 # Variables for docker stack setup
+STATUS_ATTEMPTS = 20
 TIMEOUT = 10
 DOCKER_STACK_NAME = "cookiecutter-slurm"
 SLURM_SERVICE = DOCKER_STACK_NAME + "_slurm"
@@ -151,13 +152,26 @@ def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
     # Add config variable to disable redeployment
     if name in stacks:
         logger.info("Stack {} already deployed".format(name))
+        client = docker.from_env()
+        clist = [c for c in client.containers.list()
+                 if c.name.startswith(SLURM_SERVICE)]
     else:
         # Implicitly assumes docker swarm init has been run
         sp.check_output(
             shlex.split('docker stack deploy --with-registry-auth -c {} {}'.format(docker_compose, name)))
         # Need to wait for containers to come up
-        logger.info("Sleeping {} seconds to let containers launch".format(TIMEOUT))
-        time.sleep(TIMEOUT)
+        logger.info("Verifying that stack has been initialized")
+        for i in range(STATUS_ATTEMPTS):
+            client = docker.from_env()
+            clist = [c for c in client.containers.list()
+                     if c.name.startswith(SLURM_SERVICE)]
+            if len(clist) > 0:
+                break
+            logger.info("Stack inactive; retrying, attempt {}".format(i+1))
+            time.sleep(3)
+    # slurm needs some additional time to wake up
+    time.sleep(3)
+    return clist[0]
 
 
 def stack_rm(name=DOCKER_STACK_NAME):
@@ -214,10 +228,7 @@ def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
 
 @pytest.fixture(scope="session")
 def cluster(slurm, snakemake, data):
-    client = docker.from_env()
-    stack_deploy(str(data.join("docker-compose.yaml")))
-    container = [c for c in client.containers.list()
-                 if c.name.startswith(SLURM_SERVICE)][0]
+    container = stack_deploy(str(data.join("docker-compose.yaml")))
     add_slurm_user(pytest.local_user_id, container)
     setup_sacctmgr(container)
     # Hack: modify first line in snakemake file
