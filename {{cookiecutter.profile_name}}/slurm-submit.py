@@ -104,6 +104,11 @@ if arg_dict["partition"] is None:
     else:
         arg_dict["partition"] = "{{cookiecutter.partition}}"
 
+# Set default account
+if arg_dict["account"] is None:
+    if "{{cookiecutter.account}}" != "":
+        arg_dict["account"] = "{{cookiecutter.account}}"
+
 opts = ""
 for k, v in arg_dict.items():
     if k not in opt_keys:
