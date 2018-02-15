@@ -23,6 +23,7 @@ logger = logging.getLogger("cookiecutter-slurm")
 
 ROOT_DIR = py.path.local(os.path.dirname(__file__)).join(os.pardir)
 # Variables for docker stack setup
+STATUS_ATTEMPTS = 20
 TIMEOUT = 10
 DOCKER_STACK_NAME = "cookiecutter-slurm"
 SLURM_SERVICE = DOCKER_STACK_NAME + "_slurm"
@@ -146,18 +147,39 @@ def get_images(name, tag=None):
 
 def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
     logger.info("Deploying stack {}".format(name))
+    client = docker.from_env()
     res = sp.check_output(shlex.split('docker stack ls'))
     stacks = [s.split(" ")[0] for s in res.decode().split("\n")]
     # Add config variable to disable redeployment
     if name in stacks:
         logger.info("Stack {} already deployed".format(name))
+        try:
+            container = [c for c in client.containers.list()
+                         if c.name.startswith(SLURM_SERVICE)][0]
+            res = container.exec_run("scontrol show slurmd")
+            if res.decode().startswith("scontrol: error:"):
+                raise Exception("scontrol error")
+        except Exception as e:
+            logger.warning("Stack is up but no slurm service available")
+            raise e
     else:
         # Implicitly assumes docker swarm init has been run
         sp.check_output(
             shlex.split('docker stack deploy --with-registry-auth -c {} {}'.format(docker_compose, name)))
         # Need to wait for containers to come up
-        logger.info("Sleeping {} seconds to let containers launch".format(TIMEOUT))
-        time.sleep(TIMEOUT)
+        logger.info("Verifying that stack has been initialized")
+        for i in range(STATUS_ATTEMPTS):
+            try:
+                container = [c for c in client.containers.list()
+                             if c.name.startswith(SLURM_SERVICE)][0]
+                res = container.exec_run("scontrol show slurmd")
+                if res.decode().startswith("scontrol: error:"):
+                    raise Exception("scontrol error")
+                break
+            except Exception as e:
+                logger.info("Stack inactive; retrying, attempt {}".format(i+1))
+                time.sleep(3)
+    return container
 
 
 def stack_rm(name=DOCKER_STACK_NAME):
@@ -214,10 +236,7 @@ def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
 
 @pytest.fixture(scope="session")
 def cluster(slurm, snakemake, data):
-    client = docker.from_env()
-    stack_deploy(str(data.join("docker-compose.yaml")))
-    container = [c for c in client.containers.list()
-                 if c.name.startswith(SLURM_SERVICE)][0]
+    container = stack_deploy(str(data.join("docker-compose.yaml")))
     add_slurm_user(pytest.local_user_id, container)
     setup_sacctmgr(container)
     # Hack: modify first line in snakemake file
