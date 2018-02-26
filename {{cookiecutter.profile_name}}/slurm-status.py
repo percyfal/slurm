@@ -40,6 +40,8 @@ status = res[jobid]
 
 if (status == "BOOT_FAIL"):
     print("failed")
+elif (status == "OUT_OF_MEMORY"):
+    print("failed")
 elif (status == "CANCELLED"):
     print("failed")
 elif (status == "COMPLETED"):
