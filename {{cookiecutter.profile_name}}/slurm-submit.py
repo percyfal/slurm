@@ -125,7 +125,7 @@ for k, v in arg_dict.items():
     if k not in opt_keys:
         continue
     if v is not None:
-        opts += " --{} \"{}\" ".format(k.replace("_", "-", v)
+        opts += " --{} \"{}\" ".format(k.replace("_", "-"), v)
 
 if arg_dict["wrap"] is not None:
     cmd = "sbatch {opts}".format(opts=opts)
