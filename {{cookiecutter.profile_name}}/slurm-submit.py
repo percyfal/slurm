@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import sys
+import os
 import re
 import argparse
 import subprocess
-from pathlib import Path
 
 from snakemake.utils import read_job_properties
 
@@ -110,15 +110,12 @@ if arg_dict["account"] is None:
     if "{{cookiecutter.account}}" != "":
         arg_dict["account"] = "{{cookiecutter.account}}"
 
-# Ensure output folder for Slurm log files exist
-# This is a bit hacky; it will try to create the folder
-# for every Slurm submission...
+# Ensure output folder for Slurm log files exist.
+# This is a bit hacky; will run for every Slurm submission...
 if "output" in arg_dict:
-    stdout_folder = Path(arg_dict["output"]).parent
-    stdout_folder.mkdir(exist_ok=True, parents=True)
+    os.makedirs(os.path.dirname(arg_dict["output"]), exist_ok=True)
 if "error" in arg_dict:
-    stdout_folder = Path(arg_dict["error"]).parent
-    stdout_folder.mkdir(exist_ok=True, parents=True)
+    os.makedirs(os.path.dirname(arg_dict["error"]), exist_ok=True)
 
 opts = ""
 for k, v in arg_dict.items():
