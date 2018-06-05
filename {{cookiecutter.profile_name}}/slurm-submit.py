@@ -112,9 +112,9 @@ if arg_dict["account"] is None:
 
 # Ensure output folder for Slurm log files exist.
 # This is a bit hacky; will run for every Slurm submission...
-if "output" in arg_dict:
+if arg_dict["output"] is not None:
     os.makedirs(os.path.dirname(arg_dict["output"]), exist_ok=True)
-if "error" in arg_dict:
+if arg_dict["error"] is not None:
     os.makedirs(os.path.dirname(arg_dict["error"]), exist_ok=True)
 
 opts = ""
