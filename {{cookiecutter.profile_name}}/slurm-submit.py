@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import os
 import re
 import argparse
 import subprocess
@@ -109,12 +110,19 @@ if arg_dict["account"] is None:
     if "{{cookiecutter.account}}" != "":
         arg_dict["account"] = "{{cookiecutter.account}}"
 
+# Ensure output folder for Slurm log files exist.
+# This is a bit hacky; will run for every Slurm submission...
+if arg_dict["output"] is not None:
+    os.makedirs(os.path.dirname(arg_dict["output"]), exist_ok=True)
+if arg_dict["error"] is not None:
+    os.makedirs(os.path.dirname(arg_dict["error"]), exist_ok=True)
+
 opts = ""
 for k, v in arg_dict.items():
     if k not in opt_keys:
         continue
     if v is not None:
-        opts += " --{} \"{}\" ".format(k, v)
+        opts += " --{} \"{}\" ".format(k.replace("_", "-"), v)
 
 if arg_dict["wrap"] is not None:
     cmd = "sbatch {opts}".format(opts=opts)
