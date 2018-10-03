@@ -1,0 +1,40 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version you desire here
+      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
+      - image: circleci/python:3.6.0
+      
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
+      - run:
+          name: Download docker-centos7-slurm
+          command: docker pull giovtorres/docker-centos7-slurm:latest
+      - run:
+          name: Download snakemake docker image
+          command: docker pull quay.io/biocontainers/snakemake:5.3.0--py35_0
+      - run:
+          name: Initialize docker swarm
+          command: docker swarm init
+      - save_cache:
+          key: snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
+      - run:
+          name: Install test dependencies
+          command: pip install -r requirements.txt
+      - run:
+          name: Run tests
+          no_output_timeout: 30m
+          command: pytest -v -s
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
