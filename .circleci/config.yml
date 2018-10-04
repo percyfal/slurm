@@ -8,7 +8,10 @@ jobs:
     docker:
       # specify the version you desire here
       # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      - image: circleci/python:3.6.6
+      - image: docker:17.05.0-ce-git
+      # - image: circleci/python:3.6.6
+      # - image: giovtorres/docker-centos7-slurm:latest
+      # - image: quay.io/biocontainers/snakemake:5.3.0--py35_0
       
     steps:
       - checkout
@@ -16,29 +19,9 @@ jobs:
       - restore_cache:
           keys:
             - snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
-      - run:
-          name: Install docker
-          command: |
-            apt-get update --fix-missing
-            apt-get install -y apt-transport-https ca-certificates software-properties-common
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-            apt-key fingerprint 0EBFCD88
-            add-apt-repository \
-              "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-              $(lsb_release -cs) \
-              stable"
-            apt-get update
-            apt-get install -y docker-ce
-            docker --version
-      - run:
-          name: Download docker-centos7-slurm
-          command: docker pull giovtorres/docker-centos7-slurm:latest
-      - run:
-          name: Download snakemake docker image
-          command: docker pull quay.io/biocontainers/snakemake:5.3.0--py35_0
-      - run:
-          name: Initialize docker swarm
-          command: docker swarm init
+      # - run:
+      #     name: Initialize docker swarm
+      #     command: docker swarm init
       - save_cache:
           key: snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
           paths:
