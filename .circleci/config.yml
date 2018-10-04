@@ -28,9 +28,6 @@ jobs:
       - run:
           name: Initialize docker swarm
           command: docker swarm init
-      - run:
-          name: Install test dependencies
-          command: pip install -r requirements.txt
       - save_cache:
           key: snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
           paths:
