@@ -7,22 +7,18 @@ jobs:
   build:
     working-directory: ~/cookiecutter-slurm
     machine: true
-    # docker:
-    #   # specify the version you desire here
-    #   # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-    #   # - image: docker:17.05.0-ce-git
-    #   # - image: circleci/python:3.6.6
-
-    #   - image: quay.io/biocontainers/snakemake:5.3.0--py36_1
-    #   - image: giovtorres/docker-centos7-slurm:latest
-
-      
     steps:
       - checkout
-      # Download and cache dependencies
-      # - restore_cache:
-      #     keys:
-      #       - snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
+      - run:
+          name: Update PATH
+          command: echo 'export PATH="`pwd`/miniconda/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Setup Conda
+          command: .circleci/setup.sh
+      Download and cache dependencies
+      - restore_cache:
+          keys:
+            - snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
       - run:
           name: Setup slurm container
           command: docker pull giovtorres/docker-centos7-slurm:latest
@@ -35,12 +31,10 @@ jobs:
       - run:
           name: Install test dependencies
           command: pip install -r requirements.txt
-      # - save_cache:
-      #     key: snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
-      #     paths:
-      #       - /usr/local
-
-
+      - save_cache:
+          key: snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
+          paths:
+            - miniconda
       - run:
           name: Run tests
           no_output_timeout: 30m
