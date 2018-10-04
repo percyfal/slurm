@@ -61,7 +61,8 @@ def test_no_timeout(cluster):
     options += ["--profile {}".format(str(data.join("slurm")))]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
     allres = ""
-    for res in container.exec_run(cmd, user="user", stream=True):
+    (exit_code, output) = container.exec_run(cmd, user="user", stream=True)
+    for res in output:
         print(res.decode())
         allres += res.decode()
     assert "Trying to restart" in allres
@@ -81,12 +82,13 @@ def test_profile_status_running(cluster):
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
     container.exec_run(cmd, user="user", detach=True)
     time.sleep(5)
-    res = container.exec_run("squeue -h -o \"%.18i\"")
+    (exit_code, res) = container.exec_run("squeue -h -o \"%.18i\"")
     jobids = [int(j.strip()) for j in res.decode().split("\n") if j]
     for jid in jobids:
-        for res in container.exec_run("{} {}".format(
-                str(data.join("slurm/slurm-status.py")), jid),
-                                      stream=True):
+        (exit_code, output) = container.exec_run("{} {}".format(
+            str(data.join("slurm/slurm-status.py")), jid),
+                                                 stream=True)
+        for res in output:
             assert res.decode().strip() == "running"
     options = [" --unlock"]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
@@ -103,4 +105,4 @@ def test_slurm_submit(cluster):
     cmd = "/bin/bash -c '{}'".format(" ".join(cmd_args))
     container.exec_run(cmd)
     res = container.exec_run("squeue -h -o \"%.j\"")
-    assert "wrap" in res.decode()
+    assert "wrap" in res.output.decode()

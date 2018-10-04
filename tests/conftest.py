@@ -157,7 +157,7 @@ def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
             container = [c for c in client.containers.list()
                          if c.name.startswith(SLURM_SERVICE)][0]
             res = container.exec_run("scontrol show slurmd")
-            if res.decode().startswith("scontrol: error:"):
+            if res.output.decode().startswith("scontrol: error:"):
                 raise Exception("scontrol error")
         except Exception as e:
             logger.warning("Stack is up but no slurm service available")
@@ -173,7 +173,7 @@ def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
                 container = [c for c in client.containers.list()
                              if c.name.startswith(SLURM_SERVICE)][0]
                 res = container.exec_run("scontrol show slurmd")
-                if res.decode().startswith("scontrol: error:"):
+                if res.output.decode().startswith("scontrol: error:"):
                     raise Exception("scontrol error")
                 break
             except Exception as e:
