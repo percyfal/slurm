@@ -8,4 +8,6 @@ dependencies:
   - pytest-runner
   - docker-py
   - cookiecutter
-
+  - pep8
+  - pytest-cookies
+  - pyflakes
