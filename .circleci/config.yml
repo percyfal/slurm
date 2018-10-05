@@ -5,7 +5,6 @@
 version: 2
 jobs:
   build:
-    working-directory: ~/cookiecutter-slurm
     machine: true
     steps:
       - checkout
