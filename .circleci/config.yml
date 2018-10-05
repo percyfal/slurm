@@ -8,16 +8,15 @@ jobs:
     machine: true
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - snakemake-profiles-slurm-{{ checksum "test-environment.yml" }}
       - run:
           name: Update PATH
           command: echo 'export PATH="`pwd`/miniconda/bin:$PATH"' >> $BASH_ENV
       - run:
           name: Setup Conda
           command: .circleci/setup.sh
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-            - snakemake-profiles-slurm-{{ checksum "test-environment.yml" }}
       - run:
           name: Setup slurm container
           command: docker pull giovtorres/docker-centos7-slurm:latest
