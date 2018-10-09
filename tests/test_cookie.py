@@ -43,3 +43,12 @@ def test_account(cookies):
     m = ACCOUNT_RE.search(submit_lines)
     account = m.group(1)
     assert account == "foo"
+
+
+def test_advanced_submit(cookies):
+    result = cookies.bake(
+        template=str(pytest.template),
+        extra_context={'submit_script': 'slurm-submit-advanced.py'})
+    config = result.project.join("config.yaml")
+    config_list = [x.strip() for x in config.readlines()]
+    assert "cluster: \"slurm-submit-advanced.py\"" in config_list
