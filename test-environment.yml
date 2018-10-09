@@ -1,0 +1,15 @@
+channels:
+  - conda-forge
+  - bioconda
+  - default
+dependencies:
+  - python >=3.6
+  - pip
+  - pytest
+  - pytest-runner
+  - docker-py >=3.0
+  - cookiecutter
+  - pep8
+  - pytest-cookies
+  - pyflakes
+  - snakemake ==5.3.0

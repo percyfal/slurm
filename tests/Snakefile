@@ -16,3 +16,28 @@ rule bar:
     output: "bar.txt"
     shell:
         "echo bar > {output}"
+
+
+rule excessive_runtime:
+    resources:
+        runtime = 10000
+    output: "runtime.txt"
+    shell:
+        "echo {resources} > {output}"
+
+
+rule excessive_memory:
+    resources:
+        mem_mb = 2000
+    output: "memory.txt"
+    shell:
+        "echo {resources} > {output}"
+
+
+rule memory_with_constraint:
+    resources:
+        mem_mb = 800
+    output: "memory_with_constraint.txt"
+    shell:
+        "echo {resources} > {output}"
+        
