@@ -1,0 +1,5 @@
+__default__:
+  constraint: mem500MB
+
+memory_with_constraint:
+  constraint: mem800MB
