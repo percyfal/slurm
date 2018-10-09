@@ -83,8 +83,12 @@ if "resources" in job_properties:
             arg_dict["time"] = resources["runtime"]
         elif "walltime" in resources:
             arg_dict["time"] = resources["walltime"]
-    if "mem" in resources and arg_dict["mem"] is None:
-        arg_dict["mem"] = resources["mem"]
+    if arg_dict["mem"] is None:
+        if "mem" in resources:
+            arg_dict["mem"] = resources["mem"]
+        elif "mem_mb" in resources:
+            arg_dict["mem"] = resources["mem_mb"]
+
 
 # Threads
 if "threads" in job_properties:

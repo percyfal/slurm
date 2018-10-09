@@ -5,36 +5,35 @@
 version: 2
 jobs:
   build:
-    docker:
-      # specify the version you desire here
-      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      - image: circleci/python:3.6.0
-      
+    machine: true
     steps:
       - checkout
-
-      # Download and cache dependencies
       - restore_cache:
           keys:
-            - snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
+            - snakemake-profiles-slurm-{{ checksum "test-environment.yml" }}
       - run:
-          name: Download docker-centos7-slurm
+          name: Update PATH
+          command: echo 'export PATH="`pwd`/miniconda/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Setup Conda
+          command: .circleci/setup.sh
+      - run:
+          name: Setup slurm container
           command: docker pull giovtorres/docker-centos7-slurm:latest
       - run:
-          name: Download snakemake docker image
-          command: docker pull quay.io/biocontainers/snakemake:5.3.0--py35_0
+          name: Setup snakemake container
+          command: docker pull quay.io/biocontainers/snakemake:5.3.0--py36_1
       - run:
           name: Initialize docker swarm
           command: docker swarm init
       - save_cache:
-          key: snakemake-profiles-slurm-{{ checksum "requirements.txt" }}
-      - run:
-          name: Install test dependencies
-          command: pip install -r requirements.txt
+          key: snakemake-profiles-slurm-{{ checksum "test-environment.yml" }}
+          paths:
+            - miniconda
       - run:
           name: Run tests
           no_output_timeout: 30m
-          command: pytest -v -s
+          command: pytest -v -s --tb=no
       - store_artifacts:
           path: test-reports
           destination: test-reports
