@@ -46,7 +46,11 @@ SNAKEMAKE_BASETAG = "{}--{}".format(SNAKEMAKE_VERSION, PYTHON_VERSION)
 
 
 # Snakefile for test
-SNAKEFILE = py.path.local(os.path.join(os.path.dirname(__file__), "Snakefile"))
+SNAKEFILE = py.path.local(os.path.join(os.path.dirname(__file__),
+                                       "Snakefile"))
+# Cluster configuration
+CLUSTERCONFIG = py.path.local(os.path.join(os.path.dirname(__file__),
+                                           "cluster-config.yaml"))
 
 
 def pytest_namespace():
@@ -77,9 +81,16 @@ def add_slurm_user(user, container):
 
 
 def setup_sacctmgr(container):
+    nodes = "NodeName=c\[1-10\] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=1000"
+    newnodes = "\\n".join([
+        "NodeName=c[1-3] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB",
+        "NodeName=c[4-5] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=800 Feature=fat,mem800MB",
+        "NodeName=c[6-10] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB"
+    ])
     try:
         cmd_args = [
             "/bin/bash -c 'sacctmgr --immediate add cluster name=linux ; ",
+            "sed -i -e \"s/{old}/{new}/g\" /etc/slurm/slurm.conf ;".format(old=nodes, new=newnodes),
             "supervisorctl restart slurmdbd;",
             "supervisorctl restart slurmctld;",
             "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\"'"
@@ -225,12 +236,19 @@ def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
     compose.write(docker_compose)
     snakefile = p.join("Snakefile")
     SNAKEFILE.copy(snakefile)
+    cluster_config = p.join("cluster-config.yaml")
+    CLUSTERCONFIG.copy(cluster_config)
     template = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), os.pardir)
     output_factory = tmpdir_factory.mktemp
     c = Cookies(template, output_factory, _cookiecutter_config_file)
-    c._new_output_dir = lambda: str(p)
+    c._new_output_dir = lambda: str(p.join("slurm"))
     c.bake(extra_context={'partition': 'normal'})
+    # Advanced setting
+    c = Cookies(template, output_factory, _cookiecutter_config_file)
+    c._new_output_dir = lambda: str(p.join("slurm-advanced"))
+    c.bake(extra_context={'partition': 'normal',
+                          'submit_script': 'slurm-submit-advanced.py'})
     return p
 
 
