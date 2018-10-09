@@ -1,6 +1,6 @@
 restart-times: 3
 jobscript: "slurm-jobscript.sh"
-cluster: "slurm-submit.py"
+cluster: "{{cookiecutter.submit_script}}"
 cluster-status: "slurm-status.py"
 max-jobs-per-second: 1
 max-status-checks-per-second: 10
