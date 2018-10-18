@@ -80,6 +80,10 @@ run the tests by issuing
 
 ## ChangeLog
 
+### 2018-10-18
+
+- add cookiecutter options to set sbatch output and error defaults
+
 ### 2018-10-09
 
 - add support for mem_mb in resources

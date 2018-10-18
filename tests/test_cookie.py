@@ -6,6 +6,12 @@ PARTITION_RE = re.compile("^\s+arg_dict\[\"partition\"\]\s+=\s+\"(.*)\"$",
                           flags=re.MULTILINE)
 ACCOUNT_RE = re.compile("^\s+arg_dict\[\"account\"\]\s+=\s+\"(.*)\"$",
                         flags=re.MULTILINE)
+ERROR_RE = re.compile(
+    "--error.+\n^\s+default=\"(\S+)\" if \"\S+\" else None\)",
+    flags=re.MULTILINE)
+OUTPUT_RE = re.compile(
+    "--output.+\n^\s+default=\"(\S+)\" if \"\S+\" else None\)",
+    flags=re.MULTILINE)
 
 
 def test_bake_project(cookies):
@@ -52,3 +58,18 @@ def test_advanced_submit(cookies):
     config = result.project.join("config.yaml")
     config_list = [x.strip() for x in config.readlines()]
     assert "cluster: \"slurm-submit-advanced.py\"" in config_list
+
+
+def test_output_error(cookies):
+    result = cookies.bake(
+        template=str(pytest.template),
+        extra_context={'error': 'logs/slurm-%j.err',
+                       'output': 'logs/slurm-%j.out'})
+    submit = result.project.join("slurm-submit.py")
+    submit_lines = "".join(submit.readlines())
+    m = ERROR_RE.search(submit_lines)
+    error = m.group(1)
+    assert error == "logs/slurm-%j.err"
+    m = OUTPUT_RE.search(submit_lines)
+    output = m.group(1)
+    assert output == "logs/slurm-%j.out"
