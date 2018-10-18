@@ -123,7 +123,8 @@ slurm_parser.add_argument(
 slurm_parser.add_argument(
     "-D", "--workdir", help="set working directory for batch script")
 slurm_parser.add_argument(
-    "-e", "--error", help="file for batch script's standard error")
+    "-e", "--error", help="file for batch script's standard error",
+    default="{{cookiecutter.error}}" if "{{cookiecutter.error}}" else None)
 slurm_parser.add_argument(
     "-J", "--job-name", help="name of job")
 slurm_parser.add_argument(
@@ -136,7 +137,8 @@ slurm_parser.add_argument(
     "-N", "--nodes", help="number of nodes on which to run (N = min[-max])",
     type=int)
 slurm_parser.add_argument(
-    "-o", "--output", help="file for batch script's standard output")
+    "-o", "--output", help="file for batch script's standard output",
+    default="{{cookiecutter.output}}" if "{{cookiecutter.output}}" else None)
 slurm_parser.add_argument(
     "-p", "--partition", help="partition requested",
     default=_get_default_partition(), type=str)
@@ -177,6 +179,7 @@ arg_dict = dict(args.__dict__)
 if arg_dict["account"] is None:
     if "{{cookiecutter.account}}" != "":
         arg_dict["account"] = "{{cookiecutter.account}}"
+
 
 # Ensure output folder for Slurm log files exist.
 # This is a bit hacky; will run for every Slurm submission...
