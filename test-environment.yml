@@ -3,13 +3,14 @@ channels:
   - bioconda
   - default
 dependencies:
-  - python >=3.6
-  - pip
-  - pytest
-  - pytest-runner
-  - docker-py >=3.0
   - cookiecutter
+  - docker-py >=3.0
   - pep8
-  - pytest-cookies
+  - pip
   - pyflakes
+  - pytest
+  - pytest-cookies
+  - pytest-runner
+  - python >=3.6
   - snakemake ==5.3.0
+  - urllib3
