@@ -53,16 +53,14 @@ CLUSTERCONFIG = py.path.local(os.path.join(os.path.dirname(__file__),
                                            "cluster-config.yaml"))
 
 
-def pytest_namespace():
-    return {
-        'local_user_id': LOCAL_USER_ID,
-        'snakemake_cmd': " ".join(
-            ["export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
-             " && snakemake ", "-d {workdir} ",
-             " -s {snakefile} -p "]),
-        'path': "export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
-        'template': ROOT_DIR,
-    }
+def pytest_configure():
+    pytest.local_user_id = LOCAL_USER_ID
+    pytest.snakemake_cmd = " ".join(
+        ["export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
+         " && snakemake ", "-d {workdir} ",
+         " -s {snakefile} -p "])
+    pytest.path = "export PATH=\"$SNAKEMAKE_PATH:$PATH\""
+    pytest.template = ROOT_DIR
 
 
 def add_slurm_user(user, container):
