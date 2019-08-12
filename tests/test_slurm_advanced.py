@@ -3,12 +3,8 @@
 import re
 import pytest
 import logging
-from unittest.mock import patch
-from collections import namedtuple
 
 logging.getLogger("cookiecutter").setLevel(logging.DEBUG)
-
-Response = namedtuple('Response', ['stdout'])
 
 def test_adjust_runtime(cluster):
     container, data = cluster
