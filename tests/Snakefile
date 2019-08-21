@@ -41,3 +41,6 @@ rule memory_with_constraint:
     shell:
         "echo {resources} > {output}"
         
+rule short_queue:
+    output: "short_queue.txt"
+    shell: "touch {output}"
