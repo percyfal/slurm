@@ -9,7 +9,7 @@ import shlex
 import subprocess as sp
 import time
 import logging
-from pytest_cookies import Cookies
+from pytest_cookies.plugin import Cookies
 
 # TODO: put in function so level can be set via command line
 logging.basicConfig(level=logging.INFO)
@@ -53,16 +53,14 @@ CLUSTERCONFIG = py.path.local(os.path.join(os.path.dirname(__file__),
                                            "cluster-config.yaml"))
 
 
-def pytest_namespace():
-    return {
-        'local_user_id': LOCAL_USER_ID,
-        'snakemake_cmd': " ".join(
-            ["export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
-             " && snakemake ", "-d {workdir} ",
-             " -s {snakefile} -p "]),
-        'path': "export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
-        'template': ROOT_DIR,
-    }
+def pytest_configure():
+    pytest.local_user_id = LOCAL_USER_ID
+    pytest.snakemake_cmd = " ".join(
+        ["export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
+         " && snakemake ", "-d {workdir} ",
+         " -s {snakefile} -p "])
+    pytest.path = "export PATH=\"$SNAKEMAKE_PATH:$PATH\""
+    pytest.template = ROOT_DIR
 
 
 def add_slurm_user(user, container):
@@ -79,9 +77,14 @@ def add_slurm_user(user, container):
     except:
         raise
 
+
 def link_python(container):
-    cmd = "ln -s $(which python3.6) /usr/bin/python3"
+    (exit_code, output) = container.exec_run("which python{}.{}".format(
+        sys.version_info.major,
+        sys.version_info.minor))
+    cmd = "ln -s {} /usr/bin/python{}".format(output.decode(), sys.version_info.major)
     container.exec_run(cmd, detach=False, stream=False, user="root")
+
 
 def setup_sacctmgr(container):
     nodes = "NodeName=c\[1-5\] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=1000"
