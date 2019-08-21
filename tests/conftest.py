@@ -77,9 +77,11 @@ def add_slurm_user(user, container):
     except:
         raise
 
+
 def link_python(container):
-    cmd = "ln -s $(which python3.6) /usr/bin/python3"
+    cmd = "ln -s $$(which python3.6) /usr/bin/python3"
     container.exec_run(cmd, detach=False, stream=False, user="root")
+
 
 def setup_sacctmgr(container):
     nodes = "NodeName=c\[1-5\] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=1000"
