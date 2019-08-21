@@ -2,15 +2,15 @@
 import re
 import pytest
 
-PARTITION_RE = re.compile('^\\s+arg_dict\["partition"\]\\s+=\\s+"(.*)"$',
+PARTITION_RE = re.compile(r'^\\s+arg_dict\["partition"\]\\s+=\\s+"(.*)"$',
                           flags=re.MULTILINE)
-ACCOUNT_RE = re.compile('^\\s+arg_dict\["account"\]\\s+=\\s+"(.*)"$',
+ACCOUNT_RE = re.compile(r'^\\s+arg_dict\["account"\]\\s+=\\s+"(.*)"$',
                         flags=re.MULTILINE)
 ERROR_RE = re.compile(
-    '--error.+\n^\\s+default="(\\S+)" if "\\S+" else None\)',
+    r'--error.+\n^\\s+default="(\\S+)" if "\\S+" else None\)',
     flags=re.MULTILINE)
 OUTPUT_RE = re.compile(
-    '--output.+\n^\\s+default="(\\S+)" if "\\S+" else None\)',
+    r'--output.+\n^\\s+default="(\\S+)" if "\\S+" else None\)',
     flags=re.MULTILINE)
 
 
