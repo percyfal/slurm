@@ -9,7 +9,7 @@ import shlex
 import subprocess as sp
 import time
 import logging
-from pytest_cookies import Cookies
+from pytest_cookies.plugin import Cookies
 
 # TODO: put in function so level can be set via command line
 logging.basicConfig(level=logging.INFO)
