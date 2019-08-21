@@ -79,18 +79,26 @@ def add_slurm_user(user, container):
     except:
         raise
 
+def link_python(container):
+    cmd = "ln -s $(which python3.6) /usr/bin/python3"
+    container.exec_run(cmd, detach=False, stream=False, user="root")
 
 def setup_sacctmgr(container):
-    nodes = "NodeName=c\[1-10\] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=1000"
+    nodes = "NodeName=c\[1-5\] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=1000"
+    nodes2 = "NodeName=c\[6-10\] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=1000 Gres=gpu:titanxp:1"
     newnodes = "\\n".join([
         "NodeName=c[1-3] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB",
         "NodeName=c[4-5] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=800 Feature=fat,mem800MB",
         "NodeName=c[6-10] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB"
     ])
+    partition = "PartitionName=debug Nodes=c\[6-10\] Priority=50 DefMemPerCPU=500 Shared=NO MaxNodes=5 MaxTime=5-00:00:00 DefaultTime=5-00:00:00 State=UP"
+    partition_new = partition.replace("5-00", "05")
     try:
         cmd_args = [
             "/bin/bash -c 'sacctmgr --immediate add cluster name=linux ; ",
             "sed -i -e \"s/{old}/{new}/g\" /etc/slurm/slurm.conf ;".format(old=nodes, new=newnodes),
+            "sed -i -e \"s/{old}/#/g\" /etc/slurm/slurm.conf ;".format(old=nodes2),
+            "sed -i -e \"s/{old}/{new}/g\" /etc/slurm/slurm.conf ;".format(old=partition, new=partition_new),
             "supervisorctl restart slurmdbd;",
             "supervisorctl restart slurmctld;",
             "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\"'"
@@ -261,6 +269,7 @@ def cluster(slurm, snakemake, data):
     container = stack_deploy(str(data.join("docker-compose.yaml")))
     add_slurm_user(pytest.local_user_id, container)
     setup_sacctmgr(container)
+    link_python(container)
     # Hack: modify first line in snakemake file
     container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:",
                         "/opt/local/bin/snakemake"])
