@@ -79,7 +79,7 @@ def add_slurm_user(user, container):
 
 
 def link_python(container):
-    cmd = "ln -s `which python3.6` /usr/bin/python3"
+    cmd = "ln -s /usr/bin/python3.6 /usr/bin/python3"
     container.exec_run(cmd, detach=False, stream=False, user="root")
 
 
