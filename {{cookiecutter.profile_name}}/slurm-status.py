@@ -42,7 +42,7 @@ if (status == "BOOT_FAIL"):
     print("failed")
 elif (status == "OUT_OF_MEMORY"):
     print("failed")
-elif (status == "CANCELLED"):
+elif (status.startswith("CANCELLED")):
     print("failed")
 elif (status == "COMPLETED"):
     print("success")
