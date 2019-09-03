@@ -145,6 +145,8 @@ slurm_parser.add_argument(
     "-p", "--partition", help="partition requested",
     default=_get_default_partition(), type=str)
 slurm_parser.add_argument(
+    "-q", "--qos", help="quality of service")
+slurm_parser.add_argument(
     "-Q", "--quiet", help="quiet mode (suppress informational messages)")
 slurm_parser.add_argument(
     "-t", "--time", help="time limit")
