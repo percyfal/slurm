@@ -80,6 +80,10 @@ run the tests by issuing
 
 ## ChangeLog
 
+### 2019-09-03
+
+- add qos option
+
 ### 2019-08-21
 
 - replace pytest_namespace with pytest_configure
