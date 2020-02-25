@@ -60,6 +60,8 @@ slurm_parser.add_argument(
     "-C", "--constraint", help="specify a list of constraints")
 slurm_parser.add_argument(
     "--mem", help="minimum amount of real memory")
+slurm_parser.add_argument(
+    "--mem-per-cpu", help="minimum amount of real memory per cpu")
 
 args = parser.parse_args()
 
@@ -92,6 +94,9 @@ if "resources" in job_properties:
             arg_dict["mem"] = resources["mem"]
         elif "mem_mb" in resources:
             arg_dict["mem"] = resources["mem_mb"]
+    if arg_dict["mem_per_cpu"] is None:
+        if "mem_per_cpu" in resources:
+            arg_dict["mem_per_cpu"] = resources["mem_per_cpu"]
 
 
 # Threads
@@ -101,7 +106,7 @@ if "threads" in job_properties:
 opt_keys = ["array", "account", "begin", "cpus_per_task",
             "dependency", "workdir", "error", "job_name", "mail_type",
             "mail_user", "ntasks", "nodes", "output", "partition",
-            "quiet", "time", "wrap", "constraint", "mem"]
+            "quiet", "time", "wrap", "constraint", "mem", "mem_per_cpu"]
 
 # Set default partition
 if arg_dict["partition"] is None:
