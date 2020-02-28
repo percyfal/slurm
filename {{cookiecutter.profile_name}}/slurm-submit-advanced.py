@@ -184,17 +184,6 @@ if arg_dict["account"] is None:
     if "{{cookiecutter.account}}" != "":
         arg_dict["account"] = "{{cookiecutter.account}}"
 
-
-# Ensure output folder for Slurm log files exist.
-# This is a bit hacky; will run for every Slurm submission...
-if arg_dict["output"] is not None:
-    if not os.path.exists(os.path.dirname(arg_dict["output"])):
-        os.makedirs(os.path.dirname(arg_dict["output"]))
-if arg_dict["error"] is not None:
-    if not os.path.exists(os.path.dirname(arg_dict["error"])):
-        os.makedirs(os.path.dirname(arg_dict["error"]))
-
-
 # Process resources
 if "resources" in job_properties:
     resources = job_properties["resources"]
@@ -220,6 +209,17 @@ if "threads" in job_properties:
 # long options names
 cluster_config = job_properties.get("cluster", {})
 arg_dict.update(job_properties.get("cluster", {}))
+
+
+# Ensure output folder for Slurm log files exist.
+# This is a bit hacky; will run for every Slurm submission...
+if arg_dict["output"] is not None:
+    if not os.path.exists(os.path.dirname(arg_dict["output"])):
+        os.makedirs(os.path.dirname(arg_dict["output"]))
+if arg_dict["error"] is not None:
+    if not os.path.exists(os.path.dirname(arg_dict["error"])):
+        os.makedirs(os.path.dirname(arg_dict["error"]))
+
 
 # Determine partition with features. If no constraints have been set,
 # select the partition with lowest memory
