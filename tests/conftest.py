@@ -121,7 +121,7 @@ def get_snakemake_quay_tag():
     except:
         logger.error("couldn't complete requests for quay.io")
         raise
-    r = re.compile(SNAKEMAKE_BASETAG)
+    r = re.compile(SNAKEMAKE_VERSION)
     # TODO: verify that tags are sorted by build date; if so we need
     # to verify that they are sorted in descending version order
     for t in tags:
@@ -139,7 +139,7 @@ def get_snakemake_image():
         img = SNAKEMAKE_IMAGE + ":" + str(tag)
         logger.info("pulling image {}".format(img))
         client.images.pull(img)
-        images = get_images(SNAKEMAKE_IMAGE, SNAKEMAKE_BASETAG)
+        images = get_images(SNAKEMAKE_IMAGE, tag)
     return images[0]
 
 
