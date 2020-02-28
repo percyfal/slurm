@@ -37,6 +37,7 @@ class Timer(object):
         signal.alarm(0)
 
 
+@pytest.mark.slow
 def test_timeout(cluster):
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
@@ -52,6 +53,7 @@ def test_timeout(cluster):
     container.exec_run(cmd, user="user")
 
 
+@pytest.mark.slow
 def test_no_timeout(cluster):
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(

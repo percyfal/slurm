@@ -7,6 +7,7 @@ import logging
 logging.getLogger("cookiecutter").setLevel(logging.DEBUG)
 
 
+@pytest.mark.slow
 def test_adjust_runtime(cluster):
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
@@ -29,6 +30,7 @@ def test_adjust_runtime(cluster):
     container.exec_run(cmd, user="user")
 
 
+@pytest.mark.slow
 def test_adjust_memory(cluster):
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
@@ -52,6 +54,7 @@ def test_adjust_memory(cluster):
     container.exec_run(cmd, user="user")
 
 
+@pytest.mark.slow
 def test_memory_with_constraint(cluster):
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
@@ -75,6 +78,7 @@ def test_memory_with_constraint(cluster):
     container.exec_run(cmd, user="user")
 
 
+@pytest.mark.slow
 def test_cluster_short_queue(cluster):
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
