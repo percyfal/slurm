@@ -29,14 +29,14 @@ sbatch_options.update(slurm_utils.convert_job_properties(job_properties))
 sbatch_options.update(slurm_utils.adjust_to_partition(**sbatch_options))
 
 # 4) default_cluster_config for particular rule
-sbatch_options.update(default_cluster_config.get(job_properties['rule'], {}))
+sbatch_options.update(default_cluster_config.get(job_properties["rule"], {}))
 
 # 5) cluster_config options
 sbatch_options.update(job_properties.get("cluster", {}))
 
 
 # ensure sbatch output dirs exist
-for o in ('output', "error"):
+for o in ("output", "error"):
     slurm_utils.ensure_dirs_exist(sbatch_options[o]) if o in sbatch_options else None
 
 

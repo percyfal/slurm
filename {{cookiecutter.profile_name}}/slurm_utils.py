@@ -13,10 +13,10 @@ DEFAULT_CLUSTER_CONFIG = os.path.expandvars("{{cookiecutter.default_cluster_conf
 ADJUST_TO_PARTIION = bool("{{cookiecutter.adjust_to_partition}}")
 
 RESOURCE_MAPPING = {
-        "time": ("time", "runtime", "walltime"),
-        "mem": ("mem", "mem_mb", "ram", "memory"),
-        "mem_per_cpu": ("mem_per_cpu", "mem_per_thread"),
-    }
+    "time": ("time", "runtime", "walltime"),
+    "mem": ("mem", "mem_mb", "ram", "memory"),
+    "mem_per_cpu": ("mem_per_cpu", "mem_per_thread"),
+}
 
 
 def parse_jobscript():
@@ -29,7 +29,7 @@ def parse_jobscript():
 def sbatch_defaults():
     """Unpack SBATCH_DEFAULTS."""
     d = SBATCH_DEFAULTS.split() if type(SBATCH_DEFAULTS) else SBATCH_DEFAULTS
-    args = {k.strip().strip('-'): v.strip() for k, v in [a.split("=") for a in d]}
+    args = {k.strip().strip("-"): v.strip() for k, v in [a.split("=") for a in d]}
     return args
 
 
@@ -87,7 +87,7 @@ def adjust_to_partition(**arg_dict):
     if not ADJUST_TO_PARTIION:
         return adjusted_args
 
-    partition = arg_dict.get('partition', None) or _get_default_partition()
+    partition = arg_dict.get("partition", None) or _get_default_partition()
     constraint = arg_dict.get("constraint", None)
     ntasks = int(arg_dict.get("ntasks", 1))
     nodes = int(arg_dict.get("nodes", 1))
@@ -138,34 +138,41 @@ def _get_cluster_configuration(partition):
     """Retrieve cluster configuration for a partition."""
     # Retrieve partition info; we tacitly assume we only get one response
     cmd = " ".join(
-        ["sinfo -e -O \"partition,cpus,memory,time,size,maxcpuspernode\"",
-         "-h -p {}".format(partition)])
+        [
+            'sinfo -e -O "partition,cpus,memory,time,size,maxcpuspernode"',
+            "-h -p {}".format(partition),
+        ]
+    )
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
-    m = re.search("(?P<partition>\S+)\s+(?P<cpus>\d+)\s+(?P<memory>\S+)\s+((?P<days>\d+)-)?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)",
-                  res.stdout.decode())
+    m = re.search(
+        "(?P<partition>\S+)\s+(?P<cpus>\d+)\s+(?P<memory>\S+)\s+((?P<days>\d+)-)?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)",
+        res.stdout.decode(),
+    )
     d = m.groupdict()
-    if not 'days' in d or not d['days']:
-        d['days'] = 0
-    d["time"] = int(d['days']) * 24 * 60 + \
-        int(d['hours']) * 60 + int(d['minutes']) + \
-        math.ceil(int(d['seconds']) / 60)
+    if not "days" in d or not d["days"]:
+        d["days"] = 0
+    d["time"] = (
+        int(d["days"]) * 24 * 60
+        + int(d["hours"]) * 60
+        + int(d["minutes"])
+        + math.ceil(int(d["seconds"]) / 60)
+    )
     return d
 
 
 def _get_features_and_memory(partition):
     """Retrieve features and memory for a partition in the cluster
     configuration. """
-    cmd = " ".join(
-        ["sinfo -e -O \"memory,features_act\"",
-         "-h -p {}".format(partition)])
+    cmd = " ".join(['sinfo -e -O "memory,features_act"', "-h -p {}".format(partition)])
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
     mem_feat = []
     for x in res.stdout.decode().split("\n"):
         if not re.search("^\d+", x):
             continue
         m = re.search("^(?P<mem>\d+)\s+(?P<feat>\S+)", x)
-        mem_feat.append({'mem': m.groupdict()["mem"],
-                         'features': m.groupdict()["feat"].split(",")})
+        mem_feat.append(
+            {"mem": m.groupdict()["mem"], "features": m.groupdict()["feat"].split(",")}
+        )
     return mem_feat
 
 
@@ -181,7 +188,7 @@ def _get_available_memory(mem_feat, constraints=None):
 
     """
     if constraints is None:
-        return min([int(x['mem']) for x in mem_feat])
+        return min([int(x["mem"]) for x in mem_feat])
     try:
         constraint_set = set(constraints.split(","))
         for x in mem_feat:
