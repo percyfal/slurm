@@ -41,8 +41,7 @@ Arguments are overridden in the following order and must be named according to
 
 1) `sbatch_defaults` cookiecutter option
 2) `default_cluster_config` file `__default__` entries
-3) Snakefile threads and resources (time, mem)
-3+) Adjust time, ntasks and mem if `adjust_to_partition` is True.
+3) Snakefile threads and resources (time, mem) and adjust time, ntasks and mem if `adjust_to_partition` is True.
 4) `default_cluster_config` <jobname>
 5) `--cluster-config` parsed to Snakemake (deprecated since Snakemake 5.10)
 
@@ -53,7 +52,7 @@ This is intended for system agnostic resources such as time and memory.
 
 ## Cluster configuration file
 The profile supports setting default and per-rule options in either the `default_cluster_config` file and
-the [`cluster_config` file parsed to snakemake](https://snakemake.readthedocs.io/en/stable/snakefiles/configuration.html#cluster-configuration-deprecated)
+the [`--cluster-config` file parsed to snakemake](https://snakemake.readthedocs.io/en/stable/snakefiles/configuration.html#cluster-configuration-deprecated)
 (the latter is deprecated since snakemake 5.10). The `__default__` entry will apply to all jobs. Both may be YAML (see example
 below) or JSON files.
 
