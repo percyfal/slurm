@@ -18,22 +18,32 @@ Then, you can run Snakemake with
 
 	snakemake --profile slurm ...
 
+### Cookiecutter arguments
 
-### Submission scripts
+* `profile_name` : A name to address the profile via the `--profile` Snakemake option.
+* `sbatch_defaults` : List of default arguments to sbatch, e.g.: `qos=short time=60`.
+  This is a convenience argument to avoid `default_cluster_config` for a few aruments.
+* `default_cluster_config` : Path to a YAML or JSON configuration file analogues to the
+  Snakemake [`--cluster-config` argument](https://snakemake.readthedocs.io/en/stable/snakefiles/configuration.html#cluster-configuration-deprecated). Path may relative to the profile directory or
+  absolute including environment variables
+  (e.g. `$PROJECT_ROOT/config/slurm_defaults.yaml`).
 
-There are two submission scripts that configure jobs for job
-submission. `slurm-submit.py`, the default, will use the supplied
-parameters untouched, making no attempt to modify the job submission
-to comply with the cluster partition configuration. On the other hand,
-`slurm-submit-advanced.py` will attempt to modify memory, time and
-number of tasks if these exceed the limits specified by the slurm
-configuration. If possible, the number of tasks will be increased if
-the requested memory is larger than the available memory, defined as
-the requested number of tasks times memory per cpu unit.
+### Default snakemake arguments
+Default arguments to ``snakemake`` maybe adjusted in the ``<profile path>/config.yaml`` file.
 
-### Resources
 
-The following resources are supported by on a per-rule basis:
+## Parsing arguments to SLURM (sbatch)
+Arguments are overridden in the following order:
+
+1) `sbatch_defaults`
+2) `default_cluster_config` __default__
+3) Snakefile threads and resources (time, mem)
+4) `default_cluster_config` <jobname>
+5) `--cluster-config` parsed to Snakemake (deprecated since Snakemake 5.10)
+
+
+## Resources
+The following resources are parsed from Snakefiles:
 
 - **mem**, **mem_mb**: set the memory resource request in mb.
 - **walltime**, **runtime**: set the time resource in min.
