@@ -25,6 +25,9 @@ sbatch_options.update(default_cluster_config["__default__"])
 # 3) Convert resources (no unit conversion!) and threads
 sbatch_options.update(slurm_utils.convert_job_properties(job_properties))
 
+# 3+) Adjust to partition (only if adjust_to_partition is set)
+sbatch_options.update(slurm_utils.adjust_to_partition(**sbatch_options))
+
 # 4) default_cluster_config for particular rule
 sbatch_options.update(default_cluster_config.get(job_properties['rule'], {}))
 

@@ -1,5 +1,6 @@
 {
     "profile_name": "slurm",
     "sbatch_defaults": "",
-    "default_cluster_config": ""
+    "default_cluster_config": "",
+    "adjust_to_partition": ["False", "True"]
 }
