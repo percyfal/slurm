@@ -8,7 +8,7 @@ import subprocess
 from snakemake import io
 
 
-SBATCH_DEFAULTS = """{{cookiecutter.default_arguments}}"""
+SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}"""
 DEFAULT_CLUSTER_CONFIG = os.path.expandvars("{{cookiecutter.default_cluster_config}}")
 ADJUST_TO_PARTIION = bool("{{cookiecutter.adjust_to_partition}}")
 
@@ -28,14 +28,14 @@ def parse_jobscript():
 
 def sbatch_defaults():
     """Unpack SBATCH_DEFAULTS."""
-    d = SBATCH_DEFAULTS.split() if type(SBATCH_DEFAULTS) else SBATCH_DEFAULTS
+    d = SBATCH_DEFAULTS.split() if type(SBATCH_DEFAULTS) == str else SBATCH_DEFAULTS
     args = {k.strip().strip("-"): v.strip() for k, v in [a.split("=") for a in d]}
     return args
 
 
 def load_default_cluster_config():
     """Load config to dict either from absolute path or relative to profile dir."""
-    if DEFAULT_CLUSTER_CONFIG and not DEFAULT_CLUSTER_CONFIG.startswith("{{"):
+    if DEFAULT_CLUSTER_CONFIG:
         path = os.path.join(os.path.dirname(__file__), DEFAULT_CLUSTER_CONFIG)
         dcc = io.load_configfile(path)
     else:
