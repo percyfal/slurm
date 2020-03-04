@@ -8,17 +8,6 @@ import subprocess
 from snakemake import io
 
 
-SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}"""
-DEFAULT_CLUSTER_CONFIG = os.path.expandvars("{{cookiecutter.default_cluster_config}}")
-ADJUST_TO_PARTIION = bool("{{cookiecutter.adjust_to_partition}}")
-
-RESOURCE_MAPPING = {
-    "time": ("time", "runtime", "walltime"),
-    "mem": ("mem", "mem_mb", "ram", "memory"),
-    "mem_per_cpu": ("mem_per_cpu", "mem_per_thread"),
-}
-
-
 def parse_jobscript():
     """Minimal CLI to require/only accept single positional argument."""
     p = argparse.ArgumentParser(description="SLURM snakemake submit script")
@@ -26,17 +15,17 @@ def parse_jobscript():
     return p.parse_args().jobscript
 
 
-def sbatch_defaults():
+def parse_sbatch_defaults(parsed):
     """Unpack SBATCH_DEFAULTS."""
-    d = SBATCH_DEFAULTS.split() if type(SBATCH_DEFAULTS) == str else SBATCH_DEFAULTS
+    d = parsed.split() if type(parsed) == str else parsed
     args = {k.strip().strip("-"): v.strip() for k, v in [a.split("=") for a in d]}
     return args
 
 
-def load_default_cluster_config():
+def load_cluster_config(path):
     """Load config to dict either from absolute path or relative to profile dir."""
-    if DEFAULT_CLUSTER_CONFIG:
-        path = os.path.join(os.path.dirname(__file__), DEFAULT_CLUSTER_CONFIG)
+    if path:
+        path = os.path.join(os.path.dirname(__file__), os.path.expandvars(path))
         dcc = io.load_configfile(path)
     else:
         dcc = {}
@@ -45,10 +34,10 @@ def load_default_cluster_config():
     return dcc
 
 
-def convert_job_properties(job_properties):
+def convert_job_properties(job_properties, resource_mapping={}):
     options = {}
     resources = job_properties.get("resources", {})
-    for k, v in RESOURCE_MAPPING.items():
+    for k, v in resource_mapping.items():
         options.update({k: resources[i] for i in v if i in resources})
 
     if "threads" in job_properties:
@@ -80,12 +69,10 @@ def submit_job(jobscript, **sbatch_options):
     return jobid
 
 
-def adjust_to_partition(**arg_dict):
+def advanced_argument_conversion(arg_dict):
     """Experimental adjustment of sbatch arguments to the given or default partition.
     """
     adjusted_args = {}
-    if not ADJUST_TO_PARTIION:
-        return adjusted_args
 
     partition = arg_dict.get("partition", None) or _get_default_partition()
     constraint = arg_dict.get("constraint", None)
@@ -123,7 +110,9 @@ def adjust_to_partition(**arg_dict):
     except Exception as e:
         print(e)
         raise e
-    return adjusted_args
+    # update and return
+    arg_dict.update(adjusted_args)
+    return arg_dict
 
 
 def _get_default_partition():

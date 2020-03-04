@@ -263,7 +263,7 @@ def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
     c = Cookies(template, output_factory, _cookiecutter_config_file)
     c._new_output_dir = lambda: str(p.join("slurm-advanced"))
     c.bake(extra_context={'sbatch_defaults': defaults,
-                          'adjust_to_partition': "True"})
+                          'advanced_argument_conversion': "True"})
     return p
 
 
