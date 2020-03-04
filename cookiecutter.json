@@ -1,8 +1,6 @@
 {
-    "account": "",
-    "error": "",
-    "output": "",
-    "partition": "",
     "profile_name": "slurm",
-    "submit_script": ["slurm-submit.py", "slurm-submit-advanced.py"]
+    "sbatch_defaults": "",
+    "cluster_config": "",
+    "advanced_argument_conversion": ["False", "True"]
 }

@@ -255,18 +255,15 @@ def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
     template = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), os.pardir)
     output_factory = tmpdir_factory.mktemp
+    defaults = "partition=normal output=logs/slurm-%j.out error=logs/slurm-%j.err"
     c = Cookies(template, output_factory, _cookiecutter_config_file)
     c._new_output_dir = lambda: str(p.join("slurm"))
-    c.bake(extra_context={'partition': 'normal',
-                          'output': 'logs/slurm-%j.out',
-                          'error': 'logs/slurm-%j.err'})
+    c.bake(extra_context={'sbatch_defaults': defaults})
     # Advanced setting
     c = Cookies(template, output_factory, _cookiecutter_config_file)
     c._new_output_dir = lambda: str(p.join("slurm-advanced"))
-    c.bake(extra_context={'partition': 'normal',
-                          'output': 'logs/slurm-%j.out',
-                          'error': 'logs/slurm-%j.err',
-                          'submit_script': 'slurm-submit-advanced.py'})
+    c.bake(extra_context={'sbatch_defaults': defaults,
+                          'advanced_argument_conversion': "True"})
     return p
 
 

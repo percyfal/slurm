@@ -99,12 +99,12 @@ def test_profile_status_running(cluster):
 def test_slurm_submit(cluster):
     container, data = cluster
     jobscript = data.join("jobscript.sh")
-    jobscript.write("#!/bin/bash\n# properties = {}")
+    jobscript.write('#!/bin/bash\n# properties = {"cluster": {"job-name": "sm-job"}}\nsleep 10')
     cmd_args = [pytest.path, " && ",
                 str(data.join("slurm").join("slurm").join("slurm-submit.py")),
-                "--wrap", "\"sleep 10\"", str(jobscript)]
+                str(jobscript)]
     cmd = "/bin/bash -c '{}'".format(" ".join(cmd_args))
     container.exec_run(cmd)
     (exit_code, res) = container.exec_run("squeue -h -o \"%.j\"")
-    assert "wrap" in res.decode()
+    assert "sm-job" in res.decode()
 
