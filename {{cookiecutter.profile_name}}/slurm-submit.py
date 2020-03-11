@@ -40,7 +40,7 @@ sbatch_options.update(
 )
 
 # 4) cluster_config for particular rule
-sbatch_options.update(cluster_config.get(job_properties.get("rulename"), {}))
+sbatch_options.update(cluster_config.get(job_properties.get("rule"), {}))
 
 # 5) cluster_config options
 sbatch_options.update(job_properties.get("cluster", {}))
