@@ -12,7 +12,7 @@ import slurm_utils
 # cookiecutter arguments
 SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}"""
 CLUSTER_CONFIG = "{{cookiecutter.cluster_config}}"
-ADVANCED_ARGUMENT_CONVERSION = bool("{{cookiecutter.advanced_argument_conversion}}")
+ADVANCED_ARGUMENT_CONVERSION = {"yes": True, "no": False}["{{cookiecutter.advanced_argument_conversion}}"]
 
 RESOURCE_MAPPING = {
     "time": ("time", "runtime", "walltime"),
