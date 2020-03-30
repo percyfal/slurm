@@ -6,7 +6,7 @@ rule timeout:
     resources:
         runtime = lambda wildcards, attempt: 2**(attempt - 1) * 1
     output: "foo.txt"
-    threads: lambda wildcards, attempt: min(2, 2**(attempt -1) * 1)
+    threads: lambda wildcards, attempt: attempt
     shell:
         "echo Threads: {threads} > {output};"
         "sleep 80"
