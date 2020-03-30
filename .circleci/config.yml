@@ -22,7 +22,7 @@ jobs:
           command: docker pull giovtorres/docker-centos7-slurm:latest
       - run:
           name: Setup snakemake container
-          command: docker pull quay.io/biocontainers/snakemake:5.3.0--py36_1
+          command: docker pull quay.io/biocontainers/snakemake:5.10.0--0
       - run:
           name: Initialize docker swarm
           command: docker swarm init
