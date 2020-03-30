@@ -41,7 +41,7 @@ def convert_job_properties(job_properties, resource_mapping={}):
         options.update({k: resources[i] for i in v if i in resources})
 
     if "threads" in job_properties:
-        options["ntasks"] = job_properties["threads"]
+        options["cpus-per-task"] = job_properties["threads"]
     return options
 
 
@@ -76,7 +76,7 @@ def advanced_argument_conversion(arg_dict):
 
     partition = arg_dict.get("partition", None) or _get_default_partition()
     constraint = arg_dict.get("constraint", None)
-    ntasks = int(arg_dict.get("ntasks", 1))
+    ncpus = int(arg_dict.get("cpus-per-task", 1))
     nodes = int(arg_dict.get("nodes", 1))
     mem = arg_dict.get("mem", None)
     # Determine partition with features. If no constraints have been set,
@@ -89,20 +89,21 @@ def advanced_argument_conversion(arg_dict):
     except Exception as e:
         print(e)
         raise e
+
     # Adjust memory in the single-node case only; getting the
     # functionality right for multi-node multi-cpu jobs requires more
     # development
     if "nodes" not in arg_dict or nodes == 1:
         if mem:
             adjusted_args["mem"] = min(int(mem), MEMORY_PER_PARTITION)
-            AVAILABLE_MEM = ntasks * MEMORY_PER_CPU
+            AVAILABLE_MEM = ncpus * MEMORY_PER_CPU
             if adjusted_args["mem"] > AVAILABLE_MEM:
-                adjusted_args["ntasks"] = int(math.ceil(int(mem) / MEMORY_PER_CPU))
-        adjusted_args["ntasks"] = min(int(config["cpus"]), ntasks)
+                adjusted_args["cpus-per-task"] = int(math.ceil(int(mem) / MEMORY_PER_CPU))
+        adjusted_args["cpus-per-task"] = min(int(config["cpus"]), ncpus)
     else:
         if nodes == 1:
             # Allocate at least as many tasks as requested nodes
-            adjusted_args["ntasks"] = nodes
+            adjusted_args["cpus-per-task"] = nodes
     # Update time. If requested time is larger than maximum allowed time, reset
     try:
         if "time" in arg_dict:
