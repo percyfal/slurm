@@ -30,11 +30,9 @@ SLURM_SERVICE = DOCKER_STACK_NAME + "_slurm"
 LOCAL_USER_ID = os.getuid()
 
 # Versions
-PYTHON_VERSION = "py{}{}".format(sys.version_info.major,
-                                 sys.version_info.minor)
+PYTHON_VERSION = f"py{sys.version_info.major}{sys.version_info.minor}"
 try:
-    SNAKEMAKE_VERSION = sp.check_output(
-        ["snakemake", "--version"]).decode().strip()
+    SNAKEMAKE_VERSION = sp.check_output(["snakemake", "--version"]).decode().strip()
 except:
     logger.error("couldn't get snakemake version")
     raise
@@ -46,35 +44,43 @@ SNAKEMAKE_BASETAG = "{}--{}".format(SNAKEMAKE_VERSION, PYTHON_VERSION)
 
 
 # Snakefile for test
-SNAKEFILE = py.path.local(os.path.join(os.path.dirname(__file__),
-                                       "Snakefile"))
+SNAKEFILE = py.path.local(os.path.join(os.path.dirname(__file__), "Snakefile"))
 # Cluster configuration
-CLUSTERCONFIG = py.path.local(os.path.join(os.path.dirname(__file__),
-                                           "cluster-config.yaml"))
+CLUSTERCONFIG = py.path.local(
+    os.path.join(os.path.dirname(__file__), "cluster-config.yaml")
+)
 
 
 def pytest_configure(config):
     pytest.local_user_id = LOCAL_USER_ID
     pytest.snakemake_cmd = " ".join(
-        ["export PATH=\"$SNAKEMAKE_PATH:$PATH\"",
-         " && snakemake ", "-d {workdir} ",
-         " -s {snakefile} -p "])
-    pytest.path = "export PATH=\"$SNAKEMAKE_PATH:$PATH\""
-    pytest.template = ROOT_DIR
-    config.addinivalue_line(
-        "markers", "slow: mark tests as slow"
+        [
+            'export PATH="$SNAKEMAKE_PATH:$PATH"',
+            " && snakemake ",
+            "-d {workdir} ",
+            " -s {snakefile} -p ",
+        ]
     )
+    pytest.path = 'export PATH="$SNAKEMAKE_PATH:$PATH"'
+    pytest.template = ROOT_DIR
+    config.addinivalue_line("markers", "slow: mark tests as slow")
 
 
 def add_slurm_user(user, container):
     try:
         cmd_args = [
-            "/bin/bash -c '", "if", "id", str(user), ">/dev/null;",
-            "then", "echo \"User {} exists\";".format(user),
+            "/bin/bash -c '",
+            "if",
+            "id",
+            str(user),
+            ">/dev/null;",
+            "then",
+            'echo "User {} exists";'.format(user),
             "else",
             "useradd --shell /bin/bash ",
-            "-u {} -o -c \"\" -m -g slurm user;".format(user),
-            "fi'"]
+            '-u {} -o -c "" -m -g slurm user;'.format(user),
+            "fi'",
+        ]
         cmd = " ".join(cmd_args)
         container.exec_run(cmd, detach=False, stream=False, user="root")
     except:
@@ -181,7 +187,9 @@ def get_images(name, tag=None):
         for repo in img.attrs["RepoDigests"]:
             if repo.startswith(name):
                 if tag is not None:
-                    if not any(t.startswith("{}:{}".format(name, tag)) for t in img.tags):
+                    if not any(
+                        t.startswith("{}:{}".format(name, tag)) for t in img.tags
+                    ):
                         continue
                 matches.append(img)
     return list(set(matches))
@@ -190,14 +198,15 @@ def get_images(name, tag=None):
 def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
     logger.info("Deploying stack {}".format(name))
     client = docker.from_env()
-    res = sp.check_output(shlex.split('docker stack ls'))
+    res = sp.check_output(shlex.split("docker stack ls"))
     stacks = [s.split(" ")[0] for s in res.decode().split("\n")]
     # Add config variable to disable redeployment
     if name in stacks:
         logger.info("Stack {} already deployed".format(name))
         try:
-            container = [c for c in client.containers.list()
-                         if c.name.startswith(SLURM_SERVICE)][0]
+            container = [
+                c for c in client.containers.list() if c.name.startswith(SLURM_SERVICE)
+            ][0]
             res = container.exec_run("scontrol show slurmd")
             if res.output.decode().startswith("scontrol: error:"):
                 raise Exception("scontrol error")
@@ -207,34 +216,40 @@ def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
     else:
         # Implicitly assumes docker swarm init has been run
         sp.check_output(
-            shlex.split('docker stack deploy --with-registry-auth -c {} {}'.format(docker_compose, name)))
+            shlex.split(
+                "docker stack deploy --with-registry-auth -c {} {}".format(
+                    docker_compose, name
+                )
+            )
+        )
         # Need to wait for containers to come up
         logger.info("Verifying that stack has been initialized")
         for i in range(STATUS_ATTEMPTS):
             try:
-                container = [c for c in client.containers.list()
-                             if c.name.startswith(SLURM_SERVICE)][0]
+                container = [
+                    c
+                    for c in client.containers.list()
+                    if c.name.startswith(SLURM_SERVICE)
+                ][0]
                 res = container.exec_run("scontrol show slurmd")
                 if res.output.decode().startswith("scontrol: error:"):
                     raise Exception("scontrol error")
                 break
             except Exception as e:
-                logger.info("Stack inactive; retrying, attempt {}".format(i+1))
+                logger.info("Stack inactive; retrying, attempt {}".format(i + 1))
                 time.sleep(3)
     return container
 
 
 def stack_rm(name=DOCKER_STACK_NAME):
     logger.info("Finalizing session")
-    res = sp.check_output(shlex.split('docker stack ls'))
+    res = sp.check_output(shlex.split("docker stack ls"))
     stacks = [s.split(" ")[0] for s in res.decode().split("\n")]
     if name in stacks:
         logger.info("Removing docker stack {}".format(name))
-        sp.check_output(
-            shlex.split('docker stack rm {}'.format(name)))
+        sp.check_output(shlex.split("docker stack rm {}".format(name)))
         logger.info("Pruning docker volumes")
-        sp.check_output(
-            shlex.split('docker volume prune -f'))
+        sp.check_output(shlex.split("docker volume prune -f"))
         time.sleep(TIMEOUT)
 
 
@@ -252,8 +267,7 @@ def snakemake():
 def docker_compose(slurm, snakemake):
     tag = snakemake.tags[0]
     # Docker compose template for test
-    COMPOSE_TEMPLATE = os.path.join(os.path.dirname(__file__),
-                                    "docker-compose.yaml")
+    COMPOSE_TEMPLATE = os.path.join(os.path.dirname(__file__), "docker-compose.yaml")
     with open(COMPOSE_TEMPLATE) as fh:
         TEMPLATE = "".join(fh.readlines())
     COMPOSEFILE = TEMPLATE.format(snakemake_tag=tag)
@@ -294,6 +308,5 @@ def cluster(slurm, snakemake, data):
     setup_sacctmgr(container)
     link_python(container)
     # Hack: modify first line in snakemake file
-    container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:",
-                        "/opt/local/bin/snakemake"])
+    container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:", "/opt/local/bin/snakemake"])
     return container, data
