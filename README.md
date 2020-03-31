@@ -87,6 +87,11 @@ run the tests by issuing
 
 ## ChangeLog
 
+### 2020-03-31
+
+- map threads to `--cpus-per-task` (#35)
+- rewrite some tests to address changes
+
 ### 2020-02-29
 
 - major rewrite and merge of the `slurm-submit.py` script to support any sbatch argument

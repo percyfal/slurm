@@ -12,5 +12,5 @@ dependencies:
   - pep8
   - pytest-cookies >=0.4.0
   - pyflakes
-  - snakemake ==5.10.0
+  - snakemake ==5.13.0
   - urllib3
