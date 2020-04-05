@@ -48,6 +48,8 @@ def convert_job_properties(job_properties, resource_mapping={}):
 def ensure_dirs_exist(path):
     """Ensure output folder for Slurm log files exist."""
     di = os.path.dirname(path)
+    if di == "":
+        return
     if not os.path.exists(di):
         os.makedirs(di, exist_ok=True)
     return
