@@ -25,7 +25,6 @@ def format(_pattern, _quote_all=False, **kwargs):
 # adapted from format function in snakemake.utils
 def format_values(dictionary, job_properties):
     formatted = dictionary.copy()
-    print(job_properties)
     for key, value in list(formatted.items()):
         if isinstance(value, str):
             try:
@@ -33,7 +32,7 @@ def format_values(dictionary, job_properties):
             except NameError as e:
                 msg = (
                     "Failed to format cluster config "
-                    "entry for job {}.".format(job_properties.rule)
+                    "entry for job {}.".format(job_properties['rule'])
                 )
             raise WorkflowError(msg, e)
     return formatted
