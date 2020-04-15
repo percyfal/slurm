@@ -1,6 +1,7 @@
 from snakemake.utils import SequenceFormatter, AlwaysQuotedFormatter, QuotedFormatter
 from snakemake.exceptions import WorkflowError
 
+# adapted from format function in snakemake.utils
 def format(_pattern, _quote_all=False, **kwargs):
     """Format a pattern in Snakemake style.
     This means that keywords embedded in braces are replaced by any variable
@@ -18,10 +19,10 @@ def format(_pattern, _quote_all=False, **kwargs):
             "The name {} is unknown in this context. Please "
             "make sure that you defined that variable. "
             "Also note that braces not used for variable access "
-            "have to be escaped by repeating them, "
-            "i.e. {{{{print $1}}}}".format(str(ex))
+            "have to be escaped by repeating them "
         )
 
+# adapted from format function in snakemake.utils
 def format_values(dictionary, job_properties):
     formatted = dictionary.copy()
     print(job_properties)
