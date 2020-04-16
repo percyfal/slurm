@@ -22,7 +22,7 @@ def format(_pattern, _quote_all=False, **kwargs):
             "have to be escaped by repeating them "
         )
 
-# adapted from format function in snakemake.utils
+# adapted from ClusterExecutor.cluster_params function in snakemake.executor
 def format_values(dictionary, job_properties):
     formatted = dictionary.copy()
     for key, value in list(formatted.items()):
