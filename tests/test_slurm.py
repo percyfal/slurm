@@ -5,6 +5,7 @@ import signal
 import time
 from timeit import default_timer
 import logging
+from wrapper import Snakemake
 
 logging.getLogger("cookiecutter").setLevel(logging.DEBUG)
 
@@ -38,17 +39,34 @@ class Timer(object):
         signal.alarm(0)
 
 
+@pytest.fixture
+def runner(cluster, request):
+    container, data = cluster
+    return Snakemake(container, data, request.node.name)
+
+
 @pytest.mark.slow
-def test_timeout(cluster):
+def test_timeout(runner):
+    """Test that rule with longer execution time than runtime resources times out"""
+    opts = '--cluster " sbatch -p normal -c 1 -t {resources.runtime}" --attempt 1'
+    for output in runner("foo.txt", options=opts, profile=None):
+        print(output)
+    print(runner._cmd)
+
+
+@pytest.mark.slow
+def test_timeout_obsolete(cluster):
     """Test that rule with longer execution time than runtime resources times out"""
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
-        workdir=str(data), snakefile=str(data.join("Snakefile")))
+        workdir=str(data), snakefile=str(data.join("Snakefile"))
+    )
     options = [
-        "--cluster \" sbatch -p normal -c 1 -t {resources.runtime}\"",
-        "-j 1 --attempt 1 --nolock --jn timeout-{jobid} -F foo.txt"
+        '--cluster " sbatch -p normal -c 1 -t {resources.runtime}"',
+        "-j 1 --attempt 1 --nolock --jn timeout-{jobid} -F foo.txt",
     ]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
+    print(cmd)
     with pytest.raises(TimeOut):
         with Timer() as t:
             (_, output) = container.exec_run(cmd, user="user", stream=True)
@@ -70,10 +88,11 @@ def test_no_timeout(cluster):
     """Test that rule that updates runtime doesn't timeout"""
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
-        workdir=str(data), snakefile=str(data.join("Snakefile")))
+        workdir=str(data), snakefile=str(data.join("Snakefile"))
+    )
     options = [
         " -j 1 -F foo.txt --jn no_timeout-{jobid} --nolock",
-        "--profile {}".format(str(data.join("slurm").join("slurm")))
+        "--profile {}".format(str(data.join("slurm").join("slurm"))),
     ]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
     allres = ""
@@ -89,21 +108,23 @@ def test_profile_status_running(cluster):
     """Test that slurm-status.py catches RUNNING status"""
     container, data = cluster
     snakemake_cmd = pytest.snakemake_cmd.format(
-        workdir=str(data), snakefile=str(data.join("Snakefile")))
+        workdir=str(data), snakefile=str(data.join("Snakefile"))
+    )
     options = [
-        " --cluster \" sbatch -p normal -n 1 -t 1\"",
-        "-j 1 -F foo.txt --jn running-{jobid} --nolock"
+        ' --cluster " sbatch -p normal -n 1 -t 1"',
+        "-j 1 -F foo.txt --jn running-{jobid} --nolock",
     ]
     options += ["--profile {}".format(str(data.join("slurm").join("slurm")))]
     cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
     container.exec_run(cmd, user="user", detach=True)
     time.sleep(5)
-    (exit_code, res) = container.exec_run("squeue -h -o \"%.18i\"")
+    (exit_code, res) = container.exec_run('squeue -h -o "%.18i"')
     jobids = [int(j.strip()) for j in res.decode().split("\n") if j]
     for jid in jobids:
-        (exit_code, output) = container.exec_run("{} {}".format(
-            str(data.join("slurm/slurm/slurm-status.py")), jid),
-                                                 stream=True)
+        (exit_code, output) = container.exec_run(
+            "{} {}".format(str(data.join("slurm/slurm/slurm-status.py")), jid),
+            stream=True,
+        )
         for res in output:
             assert res.decode().strip() == "running"
 
@@ -112,13 +133,18 @@ def test_slurm_submit(cluster):
     """Test that slurm-submit.py works"""
     container, data = cluster
     jobscript = data.join("jobscript.sh")
-    jobscript.write('#!/bin/bash\n# properties = {"cluster": {"job-name": "sm-job"}}\nsleep 10')
-    cmd_args = [pytest.path, " && ",
-                str(data.join("slurm").join("slurm").join("slurm-submit.py")),
-                str(jobscript)]
+    jobscript.write(
+        '#!/bin/bash\n# properties = {"cluster": {"job-name": "sm-job"}}\nsleep 10'
+    )
+    cmd_args = [
+        pytest.path,
+        " && ",
+        str(data.join("slurm").join("slurm").join("slurm-submit.py")),
+        str(jobscript),
+    ]
     cmd = "/bin/bash -c '{}'".format(" ".join(cmd_args))
     container.exec_run(cmd)
-    (exit_code, res) = container.exec_run("squeue -h -o \"%.j\"")
+    (exit_code, res) = container.exec_run('squeue -h -o "%.j"')
     assert "sm-job" in res.decode()
 
 
@@ -126,12 +152,16 @@ def test_cluster_config(cluster):
     """Test that slurm-submit.py works"""
     container, data = cluster
     jobscript = data.join("jobscript.sh")
-    jobscript.write('#!/bin/bash\n# properties = {"cluster": {"job-name": "sm-job"}}\nsleep 10')
-    cmd_args = [pytest.path, " && ",
-                str(data.join("slurm").join("slurm").join("slurm-submit.py")),
-                str(jobscript)]
+    jobscript.write(
+        '#!/bin/bash\n# properties = {"cluster": {"job-name": "sm-job"}}\nsleep 10'
+    )
+    cmd_args = [
+        pytest.path,
+        " && ",
+        str(data.join("slurm").join("slurm").join("slurm-submit.py")),
+        str(jobscript),
+    ]
     cmd = "/bin/bash -c '{}'".format(" ".join(cmd_args))
     container.exec_run(cmd)
-    (exit_code, res) = container.exec_run("squeue -h -o \"%.j\"")
+    (exit_code, res) = container.exec_run('squeue -h -o "%.j"')
     assert "sm-job" in res.decode()
-
