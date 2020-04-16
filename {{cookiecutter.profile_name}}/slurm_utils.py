@@ -6,7 +6,8 @@ import argparse
 import subprocess
 
 from snakemake import io
-
+from snakemake.utils import SequenceFormatter, AlwaysQuotedFormatter, QuotedFormatter
+from snakemake.exceptions import WorkflowError
 
 def parse_jobscript():
     """Minimal CLI to require/only accept single positional argument."""
@@ -33,7 +34,42 @@ def load_cluster_config(path):
         dcc["__default__"] = {}
     return dcc
 
+# adapted from format function in snakemake.utils
+def format(_pattern, _quote_all=False, **kwargs):
+    """Format a pattern in Snakemake style.
+    This means that keywords embedded in braces are replaced by any variable
+    values that are available in the current namespace.
+    """
+    fmt = SequenceFormatter(separator=" ")
+    if _quote_all:
+        fmt.element_formatter = AlwaysQuotedFormatter()
+    else:
+        fmt.element_formatter = QuotedFormatter()
+    try:
+        return fmt.format(_pattern, **kwargs)
+    except KeyError as ex:
+        raise NameError(
+            "The name {} is unknown in this context. Please "
+            "make sure that you defined that variable. "
+            "Also note that braces not used for variable access "
+            "have to be escaped by repeating them "
+        )
 
+# adapted from ClusterExecutor.cluster_params function in snakemake.executor
+def format_values(dictionary, job_properties):
+    formatted = dictionary.copy()
+    for key, value in list(formatted.items()):
+        if isinstance(value, str):
+            try:
+                formatted[key] = format(value, **job_properties)
+            except NameError as e:
+                msg = (
+                    "Failed to format cluster config "
+                    "entry for job {}.".format(job_properties['rule'])
+                )
+                raise WorkflowError(msg, e)
+    return formatted
+    
 def convert_job_properties(job_properties, resource_mapping={}):
     options = {}
     resources = job_properties.get("resources", {})
