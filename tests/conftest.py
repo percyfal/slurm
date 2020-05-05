@@ -10,6 +10,7 @@ import subprocess as sp
 import time
 import logging
 from pytest_cookies.plugin import Cookies
+from wrapper import SlurmRunner, SnakemakeRunner
 
 # TODO: put in function so level can be set via command line
 logging.basicConfig(level=logging.INFO)
@@ -53,15 +54,6 @@ CLUSTERCONFIG = py.path.local(
 
 def pytest_configure(config):
     pytest.local_user_id = LOCAL_USER_ID
-    pytest.snakemake_cmd = " ".join(
-        [
-            'export PATH="$SNAKEMAKE_PATH:$PATH"',
-            " && snakemake ",
-            "-d {workdir} ",
-            " -s {snakefile} -p ",
-        ]
-    )
-    pytest.path = 'export PATH="$SNAKEMAKE_PATH:$PATH"'
     pytest.template = ROOT_DIR
     config.addinivalue_line("markers", "slow: mark tests as slow")
 
@@ -88,7 +80,7 @@ def add_slurm_user(user, container):
 
 
 def link_python(container):
-    (exit_code, output) = container.exec_run(
+    (_, output) = container.exec_run(
         "which python{}.{}".format(sys.version_info.major, sys.version_info.minor)
     )
     cmd = "ln -s {} /usr/bin/python{}".format(output.decode(), sys.version_info.major)
@@ -310,3 +302,17 @@ def cluster(slurm, snakemake, data):
     # Hack: modify first line in snakemake file
     container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:", "/opt/local/bin/snakemake"])
     return container, data
+
+
+# NB: currently not used
+@pytest.fixture
+def slurm_runner(cluster, request):
+    container, data = cluster
+    return SlurmRunner(container, data, request.node.name)
+
+
+@pytest.fixture
+def smk_runner(cluster, request):
+    container, data = cluster
+    advanced = re.search("advanced", os.path.basename(request.fspath)) is not None
+    return SnakemakeRunner(container, data, request.node.name, advanced=advanced)

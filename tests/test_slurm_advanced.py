@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import re
 import pytest
 import logging
 
@@ -8,90 +7,36 @@ logging.getLogger("cookiecutter").setLevel(logging.DEBUG)
 
 
 @pytest.mark.slow
-def test_adjust_runtime(cluster):
-    container, data = cluster
-    snakemake_cmd = pytest.snakemake_cmd.format(
-        workdir=str(data), snakefile=str(data.join("Snakefile"))
+def test_adjust_runtime(smk_runner):
+    smk_runner.exec_run(
+        "timeout.txt", options=f"--cluster-config {smk_runner.cluster_config}"
     )
-    options = [
-        " -j 1 -F runtime.txt --jn adjust_runtime-{jobid} --nolock",
-        "--profile {}".format(str(data.join("slurm-advanced").join("slurm"))),
-        "--cluster-config {}".format(str(data.join("cluster-config.yaml"))),
-    ]
-    cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
-    allres = ""
-    (exit_code, output) = container.exec_run(cmd, user="user", stream=True)
-    for res in output:
-        print(res.decode())
-        allres += res.decode()
-    m = re.search("external jobid '(?P<jobid>\\d+)'", allres)
-    jobid = m.group("jobid")
-    (exit_code, output) = container.exec_run(
-        "sacct -o TimelimitRaw -n -j {}".format(jobid)
-    )
-    assert int(output.decode().strip()) == 7200
+    m = smk_runner.check_jobstatus("(?P<timelimit>\\d+)", "-o TimeLimitRaw -n", which=1)
+    assert int(m.group("timelimit")) == 2
 
 
 @pytest.mark.slow
-def test_adjust_memory(cluster):
-    container, data = cluster
-    snakemake_cmd = pytest.snakemake_cmd.format(
-        workdir=str(data), snakefile=str(data.join("Snakefile"))
+def test_adjust_memory(smk_runner):
+    smk_runner.exec_run(
+        "memory.txt", options=f"--cluster-config {smk_runner.cluster_config}"
     )
-    options = [
-        " -j 1 -F memory.txt --jn adjust_memory-{jobid} --nolock",
-        "--profile {}".format(str(data.join("slurm-advanced").join("slurm"))),
-        "--cluster-config {}".format(str(data.join("cluster-config.yaml"))),
-    ]
-    cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
-    allres = ""
-    (exit_code, output) = container.exec_run(cmd, user="user", stream=True)
-    for res in output:
-        print(res.decode())
-        allres += res.decode()
-    m = re.search("external jobid '(?P<jobid>\\d+)'", allres)
-    jobid = m.group("jobid")
-    (exit_code, output) = container.exec_run("sacct -o ReqMem -n -j {}".format(jobid))
-    m = re.search("(?P<mem>\\d+)", output.decode().split("\n")[0].strip())
+    m = smk_runner.check_jobstatus("(?P<mem>\\d+)", "-o ReqMem -n")
     assert int(m.group("mem")) == 500
 
 
 @pytest.mark.slow
-def test_memory_with_constraint(cluster):
-    container, data = cluster
-    snakemake_cmd = pytest.snakemake_cmd.format(
-        workdir=str(data), snakefile=str(data.join("Snakefile"))
+def test_memory_with_constraint(smk_runner):
+    smk_runner.exec_run(
+        "memory_with_constraint.txt",
+        options=f"--cluster-config {smk_runner.cluster_config}",
     )
-    options = [
-        " -j 1 -F memory_with_constraint.txt --jn memory_constraint-{jobid}",
-        "--profile {}".format(str(data.join("slurm-advanced").join("slurm"))),
-        "--cluster-config {}".format(str(data.join("cluster-config.yaml"))),
-    ]
-    cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
-    allres = ""
-    (exit_code, output) = container.exec_run(cmd, user="user", stream=True)
-    for res in output:
-        print(res.decode())
-        allres += res.decode()
-    m = re.search("external jobid '(?P<jobid>\\d+)'", allres)
-    jobid = m.group("jobid")
-    (exit_code, output) = container.exec_run("sacct -o ReqMem -n -j {}".format(jobid))
-    m = re.search("(?P<mem>\\d+)", output.decode().split("\n")[0].strip())
+    m = smk_runner.check_jobstatus("(?P<mem>\\d+)", "-o ReqMem -n")
     assert int(m.group("mem")) == 800
 
 
 @pytest.mark.slow
-def test_cluster_short_queue(cluster):
-    container, data = cluster
-    snakemake_cmd = pytest.snakemake_cmd.format(
-        workdir=str(data), snakefile=str(data.join("Snakefile"))
+def test_cluster_short_queue(smk_runner):
+    smk_runner.exec_run(
+        "short_queue.txt", options=f"--cluster-config {smk_runner.cluster_config}",
     )
-    options = [
-        " -j 1 -F short_queue.txt --jn short_queue-{jobid}",
-        "--profile {}".format(str(data.join("slurm-advanced").join("slurm"))),
-        "--cluster-config {}".format(str(data.join("cluster-config.yaml"))),
-    ]
-    cmd = "/bin/bash -c '{}'".format(snakemake_cmd + " ".join(options))
-    allres = ""
-    (exit_code, output) = container.exec_run(cmd, user="user")
-    assert exit_code == 0
+    assert smk_runner.check_jobstatus("debug", "-n -o Partition")

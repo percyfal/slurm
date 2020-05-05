@@ -5,19 +5,19 @@ import re
 from docker.models.containers import ExecResult
 
 
-class Snakemake:
-    """Class wrapper to run snakemake jobs on container"""
+class SlurmRunner:
+    """Class wrapper to submit slurm jobs to the test docker stack"""
 
-    _path = 'export PATH="$SNAKEMAKE_PATH:$PATH"'
-    _snakemake = "snakemake"
-    _snakefile = "Snakefile"
+    # pylint: disable=too-many-instance-attributes
+    # Going with ten attributes for now
+
     _process_args = {}
     _process_prefix = ""
 
     @classmethod
     def executable(cls, cmd):
         if os.path.split(cmd)[-1] == "bash":
-            cls._process_prefix = "set -euo pipefail;"
+            cls._process_prefix = "set -euo pipefail"
         cls._process_args["executable"] = cmd
 
     @classmethod
@@ -28,71 +28,58 @@ class Snakemake:
         self._container = container
         self._data = data
         self._jobname = jobname.lstrip("test_")
-        d = "slurm-advanced" if advanced else "slurm"
-        self._profile = self._data.join(d).join("slurm")
         self._output = []
+        self._exit_code = None
+        self._pp = self._process_prefix
+        self._cmd = ""
+        self._num_cores = 1
 
-    def __call__(self, target, iterable=True, asynchronous=False, **kwargs):
-        self._snakefile = kwargs.pop("snakefile", self._snakefile)
-        pp = kwargs.pop("process_prefix", self._process_prefix)
-        path = self._path
-        exe = self._process_args["executable"]
-        snakemake = self._snakemake
-        snakefile = self.snakefile
-        options = kwargs.pop("options", "")
+    def _setup_exec_run(self, *args, **kwargs):
+        if args:
+            kwargs["cmd"] = args[0]
+        cmd = kwargs.pop("cmd", 'squeue -h -o "%.18i"')
+        self._pp = kwargs.pop("process_prefix", self._pp)
+        self._cmd = f"{self.exe} -c '{self.pp} && {cmd}'"
+        return kwargs
 
-        profile = kwargs.pop("profile", self.profile)
-        if profile is None:
-            prof = ""
-        else:
-            prof = f"--profile {profile}"
-
-        jobname = kwargs.pop("jobname", self.jobname)
-        if jobname is None:
-            jn = ""
-        else:
-            jn = f"--jn {jobname}-{{jobid}}"
-
-        self._cmd = f"{exe} -c '{pp} {path} && {snakemake} -s {snakefile} {options} --nolock -j 1 -F {target} {prof} {jn}'"
+    def exec_run(
+        self, *args, iterable=True, asynchronous=False, verbose=True, **kwargs,
+    ):
+        self._num_cores = kwargs.pop("num_cores", 1)
+        self._output = []
+        kwargs = self._setup_exec_run(*args, **kwargs)
 
         try:
             proc = self._container.exec_run(
-                self._cmd, stream=iterable, detach=asynchronous, **kwargs
+                self.cmd, stream=iterable, detach=asynchronous, **kwargs
             )
         except Exception:
             raise
         if iterable:
+            if verbose:
+                for x in self.iter_stdout(proc):
+                    print(x)
             return self.iter_stdout(proc)
         return self.read_stdout(proc)
 
-    def __str__(self):
-        return f"{self._jobname}"
+    @property
+    def cmd(self):
+        return self._cmd
+
+    def script(self, script):
+        return self._data.join(script)
 
     @property
-    def jobname(self):
-        return f"{self._jobname}"
+    def num_cores(self):
+        return self._num_cores
 
     @property
-    def profile(self):
-        return self._profile
+    def pp(self):
+        return self._pp
 
     @property
-    def snakefile(self):
-        return self._data.join(self._snakefile)
-
-    @property
-    def output(self):
-        if isinstance(self._output, list):
-            return "\n".join(self._output)
-        return self._output
-
-    def read_stdout(self, proc):
-        if isinstance(proc, ExecResult):
-            self._output = proc.output.decode()
-            return proc.output.decode()
-        elif isinstance(proc, bytes):
-            self._output = proc.decode()
-            return proc.decode()
+    def exe(self):
+        return self._process_args["executable"]
 
     def iter_stdout(self, proc):
         # Assume ExecResult
@@ -104,21 +91,114 @@ class Snakemake:
             else:
                 self._output = l[:-1].decode()
                 yield l[:-1].decode()
-        return
+
+    @property
+    def output(self):
+        if isinstance(self._output, list):
+            return "\n".join(self._output)
+        return self._output
+
+    def read_stdout(self, proc):
+        if isinstance(proc, ExecResult):
+            self._output = proc.output.decode()
+        elif isinstance(proc, bytes):
+            self._output = proc.decode()
+        self._exit_code = proc.exit_code
+        return self._output
+
+    @property
+    def exit_code(self):
+        return self._exit_code
+
+    def __str__(self):
+        return f"{self._jobname}"
+
+
+class SnakemakeRunner(SlurmRunner):
+    """Class wrapper to run snakemake jobs in container"""
+
+    _snakemake = "snakemake"
+    _snakefile = "Snakefile"
+    _jobid_regex = r"Submitted .*job.* '?[^\d]*(\d+)'?"
+
+    def __init__(self, container, data, jobname, advanced=False):
+        super().__init__(container, data, jobname)
+        self._external_jobid = []
+        d = "slurm-advanced" if advanced else "slurm"
+        self._profile = self._data.join(d).join("slurm")
+
+    def _setup_exec_run(self, *args, **kwargs):
+        if args:
+            kwargs["target"] = args[0]
+        target = kwargs.pop("target", None)
+        if target is None:
+            return super()._setup_exec_run(**kwargs)
+        self._snakefile = kwargs.pop("snakefile", self._snakefile)
+        options = kwargs.pop("options", "")
+        profile = kwargs.pop("profile", str(self.profile))
+        jobname = kwargs.pop("jobname", str(self.jobname))
+        prof = "" if profile is None else f"--profile {profile}"
+        jn = "" if jobname is not None else f"--jn {jobname}-{{jobid}}"
+        self._external_jobid = []
+
+        self._cmd = (
+            f"{self.exe} -c '{self.pp} && "
+            + f"{self.snakemake} -s {self.snakefile} "
+            + f"{options} --nolock "
+            + f"-j {self.num_cores} -F {target} {prof} {jn}'"
+        )
+        return kwargs
+
+    @property
+    def jobname(self):
+        return self._jobname
+
+    @property
+    def profile(self):
+        return self._profile
+
+    @property
+    def snakefile(self):
+        return self._data.join(self._snakefile)
+
+    @property
+    def snakemake(self):
+        return self._snakemake
+
+    @property
+    def cluster_config(self):
+        return self._data.join("cluster-config.yaml")
+
+    @property
+    def slurm_submit(self):
+        return self.profile.join("slurm-submit.py")
+
+    @property
+    def slurm_status(self):
+        return self.profile.join("slurm-status.py")
 
     @property
     def external_jobid(self):
-        m = re.search("external jobid '(?P<jobid>\\d+)'", self.output)
-        if m is None:
-            return None
-        return m.group("jobid")
+        if len(self._external_jobid) == 0:
+            m = re.findall(self._jobid_regex, self.output)
+            if m is not None:
+                self._external_jobid = [int(x) for x in m]
+        return self._external_jobid
 
-    def is_finished(self, regex=None):
-        if regex is None:
-            regex = "Finished"
-        m = re.search(f"(?P<finished>{regex})", self.output)
-        return m is not None
+    def check_jobstatus(self, regex, options="", jobid=None, which=0):
+        """Use sacct to check jobstatus"""
+        if len(self.external_jobid) == 0:
+            return False
+        if jobid is None:
+            jobid = self.external_jobid[which]
+        cmd = f"sacct {options} -j {jobid}"
+        try:
+            (_, output) = self._container.exec_run(cmd)
+        except:
+            raise
+        return re.search(regex, output.decode())
 
 
 if "SHELL" in os.environ:
-    Snakemake.executable(os.environ["SHELL"])
+    SlurmRunner.executable(os.environ["SHELL"])
+    SnakemakeRunner.executable(os.environ["SHELL"])

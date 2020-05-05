@@ -5,7 +5,7 @@ rule all:
 rule timeout:
     resources:
         runtime = lambda wildcards, attempt: 2**(attempt - 1) * 1
-    output: "foo.txt"
+    output: "timeout.txt"
     threads: lambda wildcards, attempt: attempt
     shell:
         "echo Threads: {threads} > {output};"
@@ -41,7 +41,7 @@ rule memory_with_constraint:
     output: "memory_with_constraint.txt"
     shell:
         "echo {resources} > {output}"
-        
+
 rule short_queue:
     output: "short_queue.txt"
     shell: "touch {output}"
