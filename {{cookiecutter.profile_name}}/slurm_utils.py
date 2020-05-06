@@ -6,7 +6,9 @@ import argparse
 import subprocess
 
 from snakemake import io
-
+from snakemake.io import Wildcards
+from snakemake.utils import SequenceFormatter, AlwaysQuotedFormatter, QuotedFormatter
+from snakemake.exceptions import WorkflowError
 
 def parse_jobscript():
     """Minimal CLI to require/only accept single positional argument."""
@@ -33,7 +35,72 @@ def load_cluster_config(path):
         dcc["__default__"] = {}
     return dcc
 
+# adapted from format function in snakemake.utils
+def format(_pattern, _quote_all=False, **kwargs):
+    """Format a pattern in Snakemake style.
+    This means that keywords embedded in braces are replaced by any variable
+    values that are available in the current namespace.
+    """
+    fmt = SequenceFormatter(separator=" ")
+    if _quote_all:
+        fmt.element_formatter = AlwaysQuotedFormatter()
+    else:
+        fmt.element_formatter = QuotedFormatter()
+    try:
+        return fmt.format(_pattern, **kwargs)
+    except KeyError as ex:
+        raise NameError(
+            "The name {} is unknown in this context. Please "
+            "make sure that you defined that variable. "
+            "Also note that braces not used for variable access "
+            "have to be escaped by repeating them "
+        )
 
+#  adapted from Job.format_wildcards in snakemake.jobs
+def format_wildcards(string, job_properties):
+    """ Format a string with variables from the job. """
+    
+    class Job(object):
+        def __init__(self, job_properties):
+            for key in job_properties:
+                setattr(self, key, job_properties[key])
+    job = Job(job_properties)
+    job._format_params = Wildcards(fromdict=job_properties['params'])
+    job._format_wildcards = Wildcards(fromdict=job_properties['wildcards'])
+    _variables = dict()
+    _variables.update(
+        dict(
+            params=job._format_params,
+            wildcards=job._format_wildcards,
+            rule=job.rule
+        )
+    )
+    try:
+        return format(string, **_variables)
+    except NameError as ex:
+        raise WorkflowError(
+            "NameError with group job {}: {}".format(job.jobid, str(ex))
+        )
+    except IndexError as ex:
+        raise WorkflowError(
+            "IndexError with group job {}: {}".format(job.jobid, str(ex))
+        )
+
+# adapted from ClusterExecutor.cluster_params function in snakemake.executor
+def format_values(dictionary, job_properties):
+    formatted = dictionary.copy()
+    for key, value in list(formatted.items()):
+        if isinstance(value, str):
+            try:
+                formatted[key] = format_wildcards(value, job_properties)
+            except NameError as e:
+                msg = (
+                    "Failed to format cluster config "
+                    "entry for job {}.".format(job_properties['rule'])
+                )
+                raise WorkflowError(msg, e)
+    return formatted
+    
 def convert_job_properties(job_properties, resource_mapping={}):
     options = {}
     resources = job_properties.get("resources", {})
