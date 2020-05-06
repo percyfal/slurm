@@ -100,7 +100,9 @@ def advanced_argument_conversion(arg_dict):
             adjusted_args["mem"] = min(int(mem), MEMORY_PER_PARTITION)
             AVAILABLE_MEM = ncpus * MEMORY_PER_CPU
             if adjusted_args["mem"] > AVAILABLE_MEM:
-                adjusted_args["cpus-per-task"] = int(math.ceil(int(mem) / MEMORY_PER_CPU))
+                adjusted_args["cpus-per-task"] = int(
+                    math.ceil(int(mem) / MEMORY_PER_CPU)
+                )
         adjusted_args["cpus-per-task"] = min(int(config["cpus"]), ncpus)
     else:
         if nodes == 1:
@@ -121,7 +123,7 @@ def advanced_argument_conversion(arg_dict):
 def _get_default_partition():
     """Retrieve default partition for cluster"""
     res = subprocess.check_output(["sinfo", "-O", "partition"])
-    m = re.search("(?P<partition>\S+)\*", res.decode(), re.M)
+    m = re.search(r"(?P<partition>\S+)\*", res.decode(), re.M)
     partition = m.group("partition")
     return partition
 
@@ -137,7 +139,7 @@ def _get_cluster_configuration(partition):
     )
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
     m = re.search(
-        "(?P<partition>\S+)\s+(?P<cpus>\d+)\s+(?P<memory>\S+)\s+((?P<days>\d+)-)?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)",
+        r"(?P<partition>\S+)\s+(?P<cpus>\d+)\s+(?P<memory>\S+)\s+((?P<days>\d+)-)?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)",
         res.stdout.decode(),
     )
     d = m.groupdict()
@@ -159,9 +161,9 @@ def _get_features_and_memory(partition):
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
     mem_feat = []
     for x in res.stdout.decode().split("\n"):
-        if not re.search("^\d+", x):
+        if not re.search(r"^\d+", x):
             continue
-        m = re.search("^(?P<mem>\d+)\s+(?P<feat>\S+)", x)
+        m = re.search(r"^(?P<mem>\d+)\s+(?P<feat>\S+)", x)
         mem_feat.append(
             {"mem": m.groupdict()["mem"], "features": m.groupdict()["feat"].split(",")}
         )
