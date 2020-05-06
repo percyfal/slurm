@@ -59,6 +59,7 @@ def test_profile_status_running(smk_runner):
     """Test that slurm-status.py catches RUNNING status"""
     opts = '--cluster " sbatch -p normal -c 1 -t 1"'
     smk_runner.exec_run("timeout.txt", options=opts, profile=None, asynchronous=True)
+    time.sleep(5)
     jid = smk_runner.external_jobid[0]
     output = smk_runner.exec_run(
         cmd=f"{smk_runner.slurm_status} {jid}", verbose=False, iterable=False
