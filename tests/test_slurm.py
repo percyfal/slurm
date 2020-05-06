@@ -58,24 +58,22 @@ def test_no_timeout(smk_runner):
 def test_profile_status_running(smk_runner):
     """Test that slurm-status.py catches RUNNING status"""
     opts = '--cluster " sbatch -p normal -c 1 -t 1"'
-    smk_runner.exec_run("timeout.txt", options=opts, asynchronous=True)
-    time.sleep(5)
-    smk_runner.exec_run(cmd='squeue -h -o "%.18i"', verbose=False)
-    jobids = [int(j.strip()) for j in smk_runner.output if j]
-    for jid in jobids:
-        output = smk_runner.exec_run(
-            cmd=f"{smk_runner.slurm_status} {jid}", verbose=False, iterable=False
-        )
-        if output:
-            assert output.strip() == "running"
+    smk_runner.exec_run("timeout.txt", options=opts, profile=None, asynchronous=True)
+    jid = smk_runner.external_jobid[0]
+    output = smk_runner.exec_run(
+        cmd=f"{smk_runner.slurm_status} {jid}", verbose=False, iterable=False
+    )
+    assert output.strip() == "running"
 
 
 def test_slurm_submit(smk_runner):
     """Test that slurm-submit.py works"""
     jobscript = smk_runner.script("jobscript.sh")
     jobscript.write(
-        '#!/bin/bash\n# properties = {"cluster": {"job-name": "sm-job"}}\nsleep 10'
+        "#!/bin/bash\n" + '# properties = {"cluster": {"job-name": "sm-job"}}\n'
     )
-    smk_runner.exec_run(cmd=f"{smk_runner.slurm_submit} {jobscript}", asynchronous=True)
-    output = smk_runner.exec_run(cmd='squeue -h -o "%.j"', iterable=False)
-    assert "sm-job" in output
+    out = smk_runner.exec_run(
+        cmd=f"{smk_runner.slurm_submit} {jobscript}", iterable=False
+    )
+    time.sleep(5)
+    assert smk_runner.check_jobstatus("sm-job", options="", jobid=int(out))

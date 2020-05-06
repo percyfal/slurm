@@ -53,8 +53,9 @@ class SlurmRunner:
             proc = self._container.exec_run(
                 self.cmd, stream=iterable, detach=asynchronous, **kwargs
             )
-        except Exception:
-            raise
+
+        except Exception as e:
+            raise e
         if iterable:
             if verbose:
                 for x in self.iter_stdout(proc):
@@ -82,15 +83,15 @@ class SlurmRunner:
         return self._process_args["executable"]
 
     def iter_stdout(self, proc):
-        # Assume ExecResult
-        for l in proc.output:
-            if isinstance(l, bytes):
-                for k in l.decode().split("\n"):
-                    self._output.append(k)
-                    yield k
-            else:
-                self._output = l[:-1].decode()
-                yield l[:-1].decode()
+        if isinstance(proc, ExecResult):
+            for l in proc.output:
+                if isinstance(l, bytes):
+                    for k in l.decode().split("\n"):
+                        self._output.append(k)
+                        yield k
+                else:
+                    self._output = l[:-1].decode()
+                    yield l[:-1].decode()
 
     @property
     def output(self):
@@ -100,7 +101,10 @@ class SlurmRunner:
 
     def read_stdout(self, proc):
         if isinstance(proc, ExecResult):
-            self._output = proc.output.decode()
+            if isinstance(proc.output, str):
+                self._output = proc.output
+            else:
+                self._output = proc.output.decode()
         elif isinstance(proc, bytes):
             self._output = proc.decode()
         self._exit_code = proc.exit_code
@@ -119,7 +123,13 @@ class SnakemakeRunner(SlurmRunner):
 
     _snakemake = "snakemake"
     _snakefile = "Snakefile"
-    _jobid_regex = r"Submitted .*job.* '?[^\d]*(\d+)'?"
+    _jobid_regex = "|".join(
+        [
+            "Submitted batch job (\d+)",
+            "Submitted job \d+ with external jobid '(\d+)'"
+            # Missing resubmitted case
+        ]
+    )
 
     def __init__(self, container, data, jobname, advanced=False):
         super().__init__(container, data, jobname)
@@ -138,7 +148,7 @@ class SnakemakeRunner(SlurmRunner):
         profile = kwargs.pop("profile", str(self.profile))
         jobname = kwargs.pop("jobname", str(self.jobname))
         prof = "" if profile is None else f"--profile {profile}"
-        jn = "" if jobname is not None else f"--jn {jobname}-{{jobid}}"
+        jn = "" if jobname is None else f"--jn {jobname}-{{jobid}}"
         self._external_jobid = []
 
         self._cmd = (
@@ -180,14 +190,29 @@ class SnakemakeRunner(SlurmRunner):
     @property
     def external_jobid(self):
         if len(self._external_jobid) == 0:
-            m = re.findall(self._jobid_regex, self.output)
-            if m is not None:
-                self._external_jobid = [int(x) for x in m]
+
+            try:
+                m = re.findall(self._jobid_regex, self.output)
+                if m is not None:
+                    self._external_jobid = [int(x) for y in m for x in y if x]
+            except Exception as e:
+                print(e)
+            finally:
+                (_, out) = self._container.exec_run('squeue -h -o "%.50j,%.10i"')
+                try:
+                    for res in out.decode().split("\n"):
+                        if self.jobname in res:
+                            self._external_jobid.append(
+                                re.search(" (\d+)$", res.strip()).group(1)
+                            )
+                except Exception as e:
+                    print(e)
+
         return self._external_jobid
 
     def check_jobstatus(self, regex, options="", jobid=None, which=0):
         """Use sacct to check jobstatus"""
-        if len(self.external_jobid) == 0:
+        if self.external_jobid is None and jobid is None:
             return False
         if jobid is None:
             jobid = self.external_jobid[which]
