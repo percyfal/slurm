@@ -87,6 +87,10 @@ run the tests by issuing
 
 ## ChangeLog
 
+### 2020-04-15
+
+- process string patterns in snakemake style (replace keywords in braces)
+
 ### 2020-03-31
 
 - map threads to `--cpus-per-task` (#35)

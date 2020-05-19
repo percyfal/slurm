@@ -8,7 +8,6 @@ from snakemake.utils import read_job_properties
 
 import slurm_utils
 
-
 # cookiecutter arguments
 SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}"""
 CLUSTER_CONFIG = "{{cookiecutter.cluster_config}}"
@@ -48,6 +47,9 @@ sbatch_options.update(job_properties.get("cluster", {}))
 # 6) Advanced conversion of parameters
 if ADVANCED_ARGUMENT_CONVERSION:
     sbatch_options = slurm_utils.advanced_argument_conversion(sbatch_options)
+
+#7) Format pattern in snakemake style
+sbatch_options = slurm_utils.format_values(sbatch_options, job_properties)
 
 # ensure sbatch output dirs exist
 for o in ("output", "error"):
