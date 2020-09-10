@@ -82,6 +82,6 @@ jobs:
           service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
           docker service ls
           docker service ps cookiecutter-slurm_slurm
-          docker service logs $service
+          docker service logs $service --raw
           docker exec $service cat /etc/passwd
           pytest -v -s tests/test_slurm.py::test_slurm_submit
