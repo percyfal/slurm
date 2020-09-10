@@ -3,7 +3,7 @@
 import pytest
 import logging
 
-logging.getLogger("cookiecutter").setLevel(logging.DEBUG)
+logging.getLogger("cookiecutter").setLevel(logging.INFO)
 
 
 @pytest.mark.slow
