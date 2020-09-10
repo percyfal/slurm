@@ -66,6 +66,12 @@ jobs:
         shell: bash -l {0}
         run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
 
-      - name: run tests
+      - name: check snakemake environment
         shell: bash -l {0}
-        run: pytest -v -s
+        run: |
+          which snakemake
+          conda env list
+
+      # - name: run tests
+      #   shell: bash -l {0}
+      #   run: pytest -v -s
