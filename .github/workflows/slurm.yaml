@@ -50,8 +50,8 @@ jobs:
 
       - if: steps.cache-images.outputs.cache-hit != 'true'
         run: |
-          docker pull giovtorres/docker-centos7-slurm:latest
-          docker save -o ~/image-cache/slurm.tar giovtorres/docker-centos7-slurm:latest
+          docker pull ${{ env.SLURM_IMAGE }}
+          docker save -o ${{ env.SLURM_IMAGE }}
 
       - if: steps.cache-images.outputs.cache-hit == 'true'
         run: docker load -i ~/image-cache/slurm.tar
