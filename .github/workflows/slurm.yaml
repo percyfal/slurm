@@ -32,6 +32,7 @@ jobs:
       - name: install miniconda
         uses: goanpeca/setup-miniconda@v1
         with:
+          mamba: "*"
           channel-priority: true
           environment-file: test-environment.yml
           use-only-tar-bz2: true
