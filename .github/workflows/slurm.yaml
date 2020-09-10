@@ -25,9 +25,11 @@ jobs:
 
       - uses: actions/cache@v2
         id: cache-images
+        env:
+          CACHE_NUMBER: 0
         with:
           path: ~/image-cache
-          key: image-cache-${{ runner.os }}-${{ env.SNAKEMAKE_IMAGE }}-${{ env.SLURM_IMAGE }}
+          key: image-cache-${{ runner.os }}-${{ env.CACHE_NUMBER }}-${{ env.SNAKEMAKE_IMAGE }}-${{ env.SLURM_IMAGE }}
 
       - name: install miniconda
         uses: goanpeca/setup-miniconda@v1
@@ -77,10 +79,11 @@ jobs:
               service_up=$?;
           done
           echo "cookiecutter-slurm $service up!"
+          sleep 10
           docker service inspect cookiecutter-slurm_slurm
           docker service ls
           docker service ps cookiecutter-slurm_slurm --no-trunc
-          docker exec $service ls
+          #docker exec $service ls
 
       # - name: run tests
       #   shell: bash -l {0}
