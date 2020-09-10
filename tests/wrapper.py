@@ -228,6 +228,7 @@ class SnakemakeRunner(SlurmRunner):
         return re.search(regex, output.decode())
 
 
+print(os.environ)
 if "SHELL" in os.environ:
     SlurmRunner.executable(os.environ["SHELL"])
     SnakemakeRunner.executable(os.environ["SHELL"])
