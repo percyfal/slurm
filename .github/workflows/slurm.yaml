@@ -33,7 +33,6 @@ jobs:
 
       - name: install miniconda
         uses: goanpeca/setup-miniconda@v1
-        if: steps.cache-conda.outputs.cache-hit != 'true'
         with:
           auto-update-conda: true
           auto-activate-base: false
