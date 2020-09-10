@@ -79,16 +79,12 @@ jobs:
               service_up=$?;
           done
           echo "cookiecutter-slurm $service up!"
-          sleep 10
-          docker service inspect cookiecutter-slurm_slurm
-          docker service ls
-          docker service ps cookiecutter-slurm_slurm --no-trunc
-          #docker exec $service ls
 
       - name: run tests
         shell: bash -l {0}
         run: |
           conda env list
+          ls /usr/share/miniconda/envs
           service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
           docker exec $service which snakemake
           docker exec $service snakemake --help
