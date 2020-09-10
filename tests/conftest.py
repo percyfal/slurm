@@ -86,34 +86,37 @@ PartitionName=debug  Nodes=c[5] Shared=NO MaxNodes=1 MaxTime=05:00:00 DefaultTim
 
 def setup_sacctmgr(container):
     slurmconf = "/etc/slurm/slurm.conf"
-    try:
-        cmd_args = [
-            "/bin/bash -c 'sacctmgr --immediate add cluster name=linux;",
-            f'sed -i -e "s/CR_CPU_Memory/CR_Core/g" {slurmconf} ;',
-            f'sed -i -e "s/^NodeName/# NodeName/g" {slurmconf} ;',
-            f'sed -i -e "s/^PartitionName/# PartitionName/g" {slurmconf} ;',
-            f'echo "{SLURM_CONF}" >> {slurmconf} ; ',
-            "service supervisor stop;",
-            "service supervisor start;",
-            "supervisorctl restart slurmdbd;",
-            "supervisorctl restart slurmctld;",
-            'sacctmgr --immediate add account none,test Cluster=linux Description="none" Organization="none"\'',
-        ]
-        cmd = " ".join(cmd_args)
+    (exit_code, output) = container.exec_run(
+        f'grep -c "NEW PARTITIONS" {slurmconf}',
+        user="root",
+        detach=False,
+        stream=False,
+    )
+    cmd_args = [
+        "/bin/bash -c 'sacctmgr --immediate add cluster name=linux;",
+        f'sed -i -e "s/CR_CPU_Memory/CR_Core/g" {slurmconf} ;',
+        f'sed -i -e "s/^NodeName/# NodeName/g" {slurmconf} ;',
+        f'sed -i -e "s/^PartitionName/# PartitionName/g" {slurmconf} ;',
+        f'echo "{SLURM_CONF}" >> {slurmconf} ; ',
+        "service supervisor stop;",
+        "service supervisor start;",
+        "supervisorctl restart slurmdbd;",
+        "supervisorctl restart slurmctld;",
+        'sacctmgr --immediate add account none,test Cluster=linux Description="none" Organization="none"\'',
+    ]
+    cmd = " ".join(cmd_args)
+    print("Exit code from setting up account manager: ", exit_code)
+    print(output.decode().strip())
+    if int(output.decode().strip()) == 0:
+        logger.info("Setting up slurm partitions...")
         (exit_code, output) = container.exec_run(
-            f'grep -c "NEW PARTITIONS" {slurmconf}',
-            user="root",
-            detach=False,
-            stream=False,
+            cmd, detach=False, stream=True, user="root"
         )
-        print("Exit code from setting up account manager: ", exit_code)
+        logger.info("...setting up slurm partitions done!")
+    if exit_code:
+        logger.critical("Failed to setup account")
         print(output.decode().strip())
-        if int(output.decode().strip()) == 0:
-            logger.info("Setting up slurm partitions...")
-            container.exec_run(cmd, detach=False, stream=True, user="root")
-            logger.info("...setting up slurm partitions done!")
-    except:
-        raise
+        sys.exit()
 
 
 @pytest.fixture(scope="session")
