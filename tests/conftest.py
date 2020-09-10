@@ -42,7 +42,7 @@ def pytest_configure(config):
 
 
 def add_slurm_user(user, container):
-    logger.info("Adding user ", user, " to ", container)
+    logger.info(f"Adding user {user} to {container}")
     try:
         cmd_args = [
             "/bin/bash -c '",
@@ -60,7 +60,7 @@ def add_slurm_user(user, container):
         cmd = " ".join(cmd_args)
         container.exec_run(cmd, detach=False, stream=False, user="root")
     except:
-        logger.warn("Failed to add user ", user, " to ", container)
+        logger.warn(f"Failed to add user {user} to {container}")
         raise
 
 
