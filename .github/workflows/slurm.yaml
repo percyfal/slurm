@@ -1,0 +1,71 @@
+name: Test SnakemakeProfiles/slurm
+env:
+  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:5.23.0--2
+  SLURM_IMAGE: giovtorres/docker-centos7-slurm:latest
+
+on: [push, pull_request]
+
+jobs:
+  slurmtest:
+    name: Test slurm profile in docker containers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: mkdir -p ~/image-cache
+
+      - uses: actions/cache@v2
+        id: cache-conda
+        env:
+          CACHE_NUMBER: 0
+        with:
+          path: |
+              ~/conda_pkgs_dir
+              miniconda
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('test-environment.yml') }}
+
+      - uses: actions/cache@v2
+        id: cache-images
+        with:
+          path: ~/image-cache
+          key: image-cache-${{ runner.os }}-${{ env.SNAKEMAKE_IMAGE }}-${{ env.SLURM_IMAGE }}
+
+      - name: install miniconda
+        uses: goanpeca/setup-miniconda@v1
+        if: steps.cache-conda.outputs.cache-hit != 'true'
+        with:
+          auto-update-conda: true
+          auto-activate-base: false
+          python-version: 3.7
+          mamba-version: "*"
+          channels: conda-forge,bioconda,defaults
+          channel-priority: true
+          environment-file: test-environment.yml
+          use-only-tar-bz2: true
+          activate-environment: slurm-test
+
+      - name: docker swarm init
+        run: docker swarm init
+
+      - if: steps.cache-images.outputs.cache-hit != 'true'
+        run: |
+          docker pull quay.io/biocontainers/snakemake:5.23.0--2
+          docker save -o ~/image-cache/snakemake.tar quay.io/biocontainers/snakemake:5.23.0--2
+
+      - if: steps.cache-images.outputs.cache-hit == 'true'
+        run: docker load -i ~/image-cache/snakemake.tar
+
+      - if: steps.cache-images.outputs.cache-hit != 'true'
+        run: |
+          docker pull giovtorres/docker-centos7-slurm:latest
+          docker save -o ~/image-cache/slurm.tar giovtorres/docker-centos7-slurm:latest
+
+      - if: steps.cache-images.outputs.cache-hit == 'true'
+        run: docker load -i ~/image-cache/slurm.tar
+
+      - name: docker deploy
+        shell: bash -l {0}
+        run: docker stack deploy --with-registry-auth -c docker-compose.yml cookiecutter-slurm
+
+      - name: run tests
+        shell: bash -l {0}
+        run: pytest -v -s --tb=no

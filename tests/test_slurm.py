@@ -57,7 +57,7 @@ def test_no_timeout(smk_runner):
 
 def test_profile_status_running(smk_runner):
     """Test that slurm-status.py catches RUNNING status"""
-    opts = '--cluster " sbatch -p normal -c 1 -t 1"'
+    opts = '--cluster "sbatch -p normal -c 1 -t 1"'
     smk_runner.exec_run("timeout.txt", options=opts, profile=None, asynchronous=True)
     time.sleep(5)
     jid = smk_runner.external_jobid[0]
@@ -71,10 +71,11 @@ def test_slurm_submit(smk_runner):
     """Test that slurm-submit.py works"""
     jobscript = smk_runner.script("jobscript.sh")
     jobscript.write(
-        "#!/bin/bash\n" + '# properties = {"cluster": {"job-name": "sm-job"}}\n'
+        "#!/bin/bash\n"
+        + '# properties = {"cluster": {"job-name": "sm-job"}, "input": [], "output": [], "wildcards": {}, "params": {}, "rule": "slurm_submit"}\n'
     )
     out = smk_runner.exec_run(
         cmd=f"{smk_runner.slurm_submit} {jobscript}", iterable=False
     )
     time.sleep(5)
-    assert smk_runner.check_jobstatus("sm-job", options="", jobid=int(out))
+    assert smk_runner.check_jobstatus("sm-job", options="", jobid=int(out.strip()))

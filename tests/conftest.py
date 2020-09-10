@@ -21,27 +21,10 @@ logging.getLogger("binaryornot").setLevel(logging.INFO)
 logging.getLogger("cookiecutter").setLevel(logging.INFO)
 logger = logging.getLogger("cookiecutter-slurm")
 
-
 ROOT_DIR = py.path.local(os.path.dirname(__file__)).join(os.pardir)
-# Variables for docker stack setup
-STATUS_ATTEMPTS = 20
-TIMEOUT = 10
 DOCKER_STACK_NAME = "cookiecutter-slurm"
 SLURM_SERVICE = DOCKER_STACK_NAME + "_slurm"
 LOCAL_USER_ID = os.getuid()
-
-# Versions
-PYTHON_VERSION = f"py{sys.version_info.major}{sys.version_info.minor}"
-try:
-    SNAKEMAKE_VERSION = sp.check_output(["snakemake", "--version"]).decode().strip()
-except:
-    logger.error("couldn't get snakemake version")
-    raise
-
-# Image names
-SLURM_IMAGE = "giovtorres/docker-centos7-slurm"
-SNAKEMAKE_IMAGE = "quay.io/biocontainers/snakemake"
-SNAKEMAKE_BASETAG = "{}--{}".format(SNAKEMAKE_VERSION, PYTHON_VERSION)
 
 
 # Snakefile for test
@@ -128,149 +111,9 @@ def setup_sacctmgr(container):
         raise
 
 
-def get_snakemake_quay_tag():
-    import requests
-
-    try:
-        r = requests.get(
-            "https://quay.io/api/v1/repository/biocontainers/snakemake/tag"
-        )
-        tags = [t["name"] for t in r.json()["tags"]]
-    except:
-        logger.error("couldn't complete requests for quay.io")
-        raise
-    r = re.compile(SNAKEMAKE_VERSION)
-    # TODO: verify that tags are sorted by build date; if so we need
-    # to verify that they are sorted in descending version order
-    for t in tags:
-        if r.search(t):
-            return t
-    logger.error("No valid snakemake tag found")
-    sys.exit(1)
-
-
-def get_snakemake_image():
-    images = get_images(SNAKEMAKE_IMAGE, SNAKEMAKE_BASETAG)
-    client = docker.from_env()
-    if len(images) == 0:
-        tag = get_snakemake_quay_tag()
-        img = SNAKEMAKE_IMAGE + ":" + str(tag)
-        logger.info("pulling image {}".format(img))
-        client.images.pull(img)
-        images = get_images(SNAKEMAKE_IMAGE, tag)
-    return images[0]
-
-
-def get_slurm_image():
-    images = get_images(SLURM_IMAGE)
-    client = docker.from_env()
-    if len(images) == 0:
-        logger.info("pulling image {}".format(SLURM_IMAGE))
-        client.images.pull(SLURM_IMAGE)
-        images = get_images(SLURM_IMAGE)
-    return images[0]
-
-
-def get_images(name, tag=None):
-    client = docker.from_env()
-    images = client.images.list()
-    matches = []
-    for img in images:
-        for repo in img.attrs["RepoDigests"]:
-            if repo.startswith(name):
-                if tag is not None:
-                    if not any(
-                        t.startswith("{}:{}".format(name, tag)) for t in img.tags
-                    ):
-                        continue
-                matches.append(img)
-    return list(set(matches))
-
-
-def stack_deploy(docker_compose, name=DOCKER_STACK_NAME):
-    logger.info("Deploying stack {}".format(name))
-    client = docker.from_env()
-    res = sp.check_output(shlex.split("docker stack ls"))
-    stacks = [s.split(" ")[0] for s in res.decode().split("\n")]
-    # Add config variable to disable redeployment
-    if name in stacks:
-        logger.info("Stack {} already deployed".format(name))
-        try:
-            container = [
-                c for c in client.containers.list() if c.name.startswith(SLURM_SERVICE)
-            ][0]
-            res = container.exec_run("scontrol show slurmd")
-            if res.output.decode().startswith("scontrol: error:"):
-                raise Exception("scontrol error")
-        except Exception as e:
-            logger.warning("Stack is up but no slurm service available")
-            raise e
-    else:
-        # Implicitly assumes docker swarm init has been run
-        sp.check_output(
-            shlex.split(
-                "docker stack deploy --with-registry-auth -c {} {}".format(
-                    docker_compose, name
-                )
-            )
-        )
-        # Need to wait for containers to come up
-        logger.info("Verifying that stack has been initialized")
-        for i in range(STATUS_ATTEMPTS):
-            try:
-                container = [
-                    c
-                    for c in client.containers.list()
-                    if c.name.startswith(SLURM_SERVICE)
-                ][0]
-                res = container.exec_run("scontrol show slurmd")
-                if res.output.decode().startswith("scontrol: error:"):
-                    raise Exception("scontrol error")
-                break
-            except Exception as e:
-                logger.info("Stack inactive; retrying, attempt {}".format(i + 1))
-                time.sleep(3)
-    return container
-
-
-def stack_rm(name=DOCKER_STACK_NAME):
-    logger.info("Finalizing session")
-    res = sp.check_output(shlex.split("docker stack ls"))
-    stacks = [s.split(" ")[0] for s in res.decode().split("\n")]
-    if name in stacks:
-        logger.info("Removing docker stack {}".format(name))
-        sp.check_output(shlex.split("docker stack rm {}".format(name)))
-        logger.info("Pruning docker volumes")
-        sp.check_output(shlex.split("docker volume prune -f"))
-        time.sleep(TIMEOUT)
-
-
 @pytest.fixture(scope="session")
-def slurm():
-    return get_slurm_image()
-
-
-@pytest.fixture(scope="session")
-def snakemake():
-    return get_snakemake_image()
-
-
-@pytest.fixture(scope="session")
-def docker_compose(slurm, snakemake):
-    tag = snakemake.tags[0]
-    # Docker compose template for test
-    COMPOSE_TEMPLATE = os.path.join(os.path.dirname(__file__), "docker-compose.yaml")
-    with open(COMPOSE_TEMPLATE) as fh:
-        TEMPLATE = "".join(fh.readlines())
-    COMPOSEFILE = TEMPLATE.format(snakemake_tag=tag)
-    return COMPOSEFILE
-
-
-@pytest.fixture(scope="session")
-def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
+def data(tmpdir_factory, _cookiecutter_config_file):
     p = tmpdir_factory.mktemp("data")
-    compose = p.join("docker-compose.yaml")
-    compose.write(docker_compose)
     snakefile = p.join("Snakefile")
     SNAKEFILE.copy(snakefile)
     cluster_config = p.join("cluster-config.yaml")
@@ -294,8 +137,13 @@ def data(tmpdir_factory, _cookiecutter_config_file, docker_compose):
 
 
 @pytest.fixture(scope="session")
-def cluster(slurm, snakemake, data):
-    container = stack_deploy(str(data.join("docker-compose.yaml")))
+def cluster(data):
+    client = docker.from_env()
+    service_list = client.services.list(filters={"name": "cookiecutter-slurm_slurm"})
+    s = client.services.get(service_list[0].id)
+    container = client.containers.get(
+        s.tasks()[0]["Status"]["ContainerStatus"]["ContainerID"]
+    )
     add_slurm_user(pytest.local_user_id, container)
     setup_sacctmgr(container)
     link_python(container)

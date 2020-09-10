@@ -1,7 +1,7 @@
 version: '3'
 services:
   snakemake:
-    image: {snakemake_tag}
+    image: quay.io/biocontainers/snakemake:5.23.0--2
     hostname: ernie
     command: /bin/bash
     deploy:

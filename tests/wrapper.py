@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import re
+import logging
 from docker.models.containers import ExecResult
 
 
@@ -27,12 +28,13 @@ class SlurmRunner:
     def __init__(self, container, data, jobname, advanced=False):
         self._container = container
         self._data = data
-        self._jobname = jobname.lstrip("test_")
+        self._jobname = re.sub("test_", "", jobname)
         self._output = []
         self._exit_code = None
         self._pp = self._process_prefix
         self._cmd = ""
         self._num_cores = 1
+        self._logger = logging.getLogger(str(self))
 
     def _setup_exec_run(self, *args, **kwargs):
         if args:
@@ -48,6 +50,8 @@ class SlurmRunner:
         self._num_cores = kwargs.pop("num_cores", 1)
         self._output = []
         kwargs = self._setup_exec_run(*args, **kwargs)
+        if verbose:
+            self._logger.info(f"'{self.cmd}'")
 
         try:
             proc = self._container.exec_run(
