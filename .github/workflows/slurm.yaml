@@ -76,8 +76,10 @@ jobs:
               service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
               service_up=$?
           done
-          echo cookiecutter-slurm up!
+          echo cookiecutter-slurm up: $service!
 
       - name: run tests
         shell: bash -l {0}
-        run: pytest -v -s
+        run: |
+          conda env list
+          pytest -v -s
