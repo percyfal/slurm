@@ -106,7 +106,7 @@ def setup_sacctmgr(container):
         )
         if int(output.decode().strip()) == 0:
             logger.info("Setting up slurm partitions...")
-            container.exec_run(cmd, detach=False, stream=False, user="root")
+            container.exec_run(cmd, detach=False, stream=True, user="root")
             logger.info("...setting up slurm partitions done!")
     except:
         raise
@@ -141,18 +141,19 @@ def data(tmpdir_factory, _cookiecutter_config_file):
 def cluster(data):
     client = docker.from_env()
     service_list = client.services.list(filters={"name": "cookiecutter-slurm_slurm"})
-    print(service_list)
+    logger.info(service_list)
     s = client.services.get(service_list[0].id)
-    print(s)
+    logger.info(s)
     container = client.containers.get(
         s.tasks()[0]["Status"]["ContainerStatus"]["ContainerID"]
     )
-    print(container)
+    logger.info(container)
     add_slurm_user(pytest.local_user_id, container)
     setup_sacctmgr(container)
     link_python(container)
     # Hack: modify first line in snakemake file
     container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:", "/opt/local/bin/snakemake"])
+    container.exec_run(["sinfo"], stream=True)
     return container, data
 
 
