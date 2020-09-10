@@ -69,9 +69,10 @@ jobs:
       - name: check snakemake environment
         shell: bash -l {0}
         run: |
-          which snakemake
-          conda env list
+          service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
+          docker exec $service sinfo
+          docker exec $service which snakemake
 
-      # - name: run tests
-      #   shell: bash -l {0}
-      #   run: pytest -v -s
+      - name: run tests
+        shell: bash -l {0}
+        run: pytest -v -s
