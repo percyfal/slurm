@@ -64,7 +64,7 @@ jobs:
 
       - name: docker deploy
         shell: bash -l {0}
-        run: docker stack deploy --with-registry-auth -c docker-compose.yml cookiecutter-slurm
+        run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
 
       - name: run tests
         shell: bash -l {0}
