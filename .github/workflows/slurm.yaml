@@ -13,14 +13,12 @@ jobs:
       - uses: actions/checkout@v2
       - run: mkdir -p ~/image-cache
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v1
         id: cache-conda
         env:
           CACHE_NUMBER: 0
         with:
-          path: |
-              ~/conda_pkgs_dir
-              miniconda
+          path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('test-environment.yml') }}
 
       - uses: actions/cache@v2
@@ -34,8 +32,6 @@ jobs:
       - name: install miniconda
         uses: goanpeca/setup-miniconda@v1
         with:
-          auto-update-conda: true
-          auto-activate-base: false
           python-version: 3.7
           mamba-version: "*"
           channels: conda-forge,bioconda,defaults
@@ -49,8 +45,8 @@ jobs:
 
       - if: steps.cache-images.outputs.cache-hit != 'true'
         run: |
-          docker pull quay.io/biocontainers/snakemake:5.23.0--2
-          docker save -o ~/image-cache/snakemake.tar quay.io/biocontainers/snakemake:5.23.0--2
+          docker pull ${{ env.SNAKEMAKE_IMAGE }}
+          docker save -o ~/image-cache/snakemake.tar ${{ env.SNAKEMAKE_IMAGE }}
 
       - if: steps.cache-images.outputs.cache-hit == 'true'
         run: docker load -i ~/image-cache/snakemake.tar
@@ -65,7 +61,9 @@ jobs:
 
       - name: docker deploy
         shell: bash -l {0}
-        run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
+        run: |
+          docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
+          sleep 10
 
       - name: wait for docker stack to initialize
         shell: bash -l {0}
