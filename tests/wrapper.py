@@ -228,7 +228,10 @@ class SnakemakeRunner(SlurmRunner):
         return re.search(regex, output.decode())
 
 
-print(os.environ)
 if "SHELL" in os.environ:
     SlurmRunner.executable(os.environ["SHELL"])
     SnakemakeRunner.executable(os.environ["SHELL"])
+# Try falling back on /bin/bash
+else:
+    SlurmRunner.executable("/bin/bash")
+    SnakemakeRunner.executable("/bin/bash")
