@@ -82,9 +82,9 @@ jobs:
       - name: run tests
         shell: bash -l {0}
         run: |
-          conda env list
-          ls /usr/share/miniconda/envs
           service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
+          echo $service
+          docker ps
           docker exec $service which snakemake
           docker exec $service snakemake --help
           pytest -v -s
