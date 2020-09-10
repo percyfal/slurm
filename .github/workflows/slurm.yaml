@@ -71,15 +71,15 @@ jobs:
         run: |
           service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
           service_up=$?
-          until [ $service_up -eq 0 ]; do \
-              echo cookiecutter-slurm unavailable; sleep 1; \
-              service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`; \
-              service_up=$?; \
+          until [ $service_up -eq 0 ]; do
+              echo cookiecutter-slurm unavailable; sleep 1;
+              service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`;
+              service_up=$?;
           done
           echo "cookiecutter-slurm $service up!"
-          #docker service ls
-          #docker service ps $service
-          #docker exec $service ls
+          docker service ls
+          docker service ps $service
+          docker exec $service ls
 
       # - name: run tests
       #   shell: bash -l {0}
