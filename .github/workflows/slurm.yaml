@@ -77,9 +77,9 @@ jobs:
               service_up=$?; \
           done
           echo "cookiecutter-slurm $service up!"
-          docker service ls
-          docker service ps $service
-          docker exec $service ls
+          #docker service ls
+          #docker service ps $service
+          #docker exec $service ls
 
       # - name: run tests
       #   shell: bash -l {0}
