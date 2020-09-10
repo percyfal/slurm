@@ -77,4 +77,6 @@ jobs:
       - name: run tests
         shell: bash -l {0}
         run: |
-          pytest -v -s
+          #pytest -v -s
+          service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
+          docker exec $service cat /etc/slurm/slurm.conf

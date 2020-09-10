@@ -42,6 +42,7 @@ def pytest_configure(config):
 
 
 def add_slurm_user(user, container):
+    logger.info("Adding user ", user, " to ", container)
     try:
         cmd_args = [
             "/bin/bash -c '",
@@ -59,6 +60,7 @@ def add_slurm_user(user, container):
         cmd = " ".join(cmd_args)
         container.exec_run(cmd, detach=False, stream=False, user="root")
     except:
+        logger.warn("Failed to add user ", user, " to ", container)
         raise
 
 
@@ -104,6 +106,8 @@ def setup_sacctmgr(container):
             detach=False,
             stream=False,
         )
+        print("Exit code from setting up account manager: ", exit_code)
+        print(output.decode().strip())
         if int(output.decode().strip()) == 0:
             logger.info("Setting up slurm partitions...")
             container.exec_run(cmd, detach=False, stream=True, user="root")
@@ -153,7 +157,8 @@ def cluster(data):
     link_python(container)
     # Hack: modify first line in snakemake file
     container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:", "/opt/local/bin/snakemake"])
-    container.exec_run(["sinfo"], stream=True)
+    (exit_code, output) = container.exec_run(["sinfo"], stream=False)
+    print(output.decode().strip())
     return container, data
 
 
