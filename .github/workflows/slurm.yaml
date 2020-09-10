@@ -66,12 +66,17 @@ jobs:
         shell: bash -l {0}
         run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
 
-      - name: check snakemake environment
+      - name: wait for docker stack to initialize
         shell: bash -l {0}
         run: |
           service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
-          docker exec $service sinfo
-          docker exec $service which snakemake
+          service_up=$?
+          until [ $service_up -eq 0 ]; do \
+              echo cookiecutter-slurm unavailable; sleep 1; \
+              service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
+              service_up=$?
+          done
+          echo cookiecutter-slurm up!
 
       - name: run tests
         shell: bash -l {0}
