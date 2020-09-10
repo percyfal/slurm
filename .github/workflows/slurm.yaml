@@ -53,7 +53,7 @@ jobs:
       - if: steps.cache-images.outputs.cache-hit != 'true'
         run: |
           docker pull ${{ env.SLURM_IMAGE }}
-          docker save -o ${{ env.SLURM_IMAGE }}
+          docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
 
       - if: steps.cache-images.outputs.cache-hit == 'true'
         run: docker load -i ~/image-cache/slurm.tar
