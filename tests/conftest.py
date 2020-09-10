@@ -105,8 +105,9 @@ def setup_sacctmgr(container):
             stream=False,
         )
         if int(output.decode().strip()) == 0:
-            logger.info("Setting up slurm partitions")
+            logger.info("Setting up slurm partitions...")
             container.exec_run(cmd, detach=False, stream=False, user="root")
+            logger.info("...setting up slurm partitions done!")
     except:
         raise
 
@@ -140,10 +141,13 @@ def data(tmpdir_factory, _cookiecutter_config_file):
 def cluster(data):
     client = docker.from_env()
     service_list = client.services.list(filters={"name": "cookiecutter-slurm_slurm"})
+    print(service_list)
     s = client.services.get(service_list[0].id)
+    print(s)
     container = client.containers.get(
         s.tasks()[0]["Status"]["ContainerStatus"]["ContainerID"]
     )
+    print(container)
     add_slurm_user(pytest.local_user_id, container)
     setup_sacctmgr(container)
     link_python(container)
