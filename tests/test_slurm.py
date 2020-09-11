@@ -42,6 +42,17 @@ class Timer:
 
 @service_up
 @pytest.mark.slow
+def test_no_timeout(smk_runner):
+    """Test that rule that updates runtime doesn't timeout"""
+    smk_runner.exec_run("timeout.txt")
+    assert "Trying to restart" in smk_runner.output
+    assert "Finished job" in smk_runner.output
+    (exit_code, output) = smk_runner._container.exec_run("sacct")
+    print(output.decode())
+
+
+@service_up
+@pytest.mark.slow
 def test_timeout(smk_runner):
     """Test that rule excessive runtime resources times out"""
     opts = '--cluster "sbatch -p normal -c 1 -t {resources.runtime}" --attempt 1'
@@ -53,15 +64,6 @@ def test_timeout(smk_runner):
         (exit_code, output) = smk_runner._container.exec_run("sacct")
         print(output.decode())
     assert smk_runner.check_jobstatus("TIMEOUT|NODE_FAIL")
-
-
-@service_up
-@pytest.mark.slow
-def test_no_timeout(smk_runner):
-    """Test that rule that updates runtime doesn't timeout"""
-    smk_runner.exec_run("timeout.txt")
-    assert "Trying to restart" in smk_runner.output
-    assert "Finished job" in smk_runner.output
 
 
 @service_up

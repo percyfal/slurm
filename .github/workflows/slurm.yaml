@@ -75,4 +75,4 @@ jobs:
 
       - name: run tests
         shell: bash -l {0}
-        run: pytest -v -s tests/test_slurm.py::test_timeout
+        run: pytest -v -s
