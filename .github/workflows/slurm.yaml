@@ -65,29 +65,13 @@ jobs:
         shell: bash -l {0}
         run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
 
-      - name: Check slurm service
-        shell: bash -l {0}
-        run: |
-          docker service ps ${{ env.SERVICE_SLURM }} --format "{{.CurrentState}}" | grep Running ;
-          service_up=$?
-          until [ $service_up -eq 0 ]; do
-              echo "service ${{ env.SERVICE_SLURM }} unavailable"; sleep 3;
-              docker service ps ${{ env.SERVICE_SLURM }} --format "{{.CurrentState}}" | grep Running ;
-              service_up=$?;
-          done
-          echo "service ${{ env.SERVICE_SLURM }} up!"
-
       - name: Check snakemake service
         shell: bash -l {0}
-        run: |
-          docker service ps ${{ env.SERVICE_SNAKEMAKE }} --format "{{.CurrentState}}" | grep Running ;
-          service_up=$?
-          until [ $service_up -eq 0 ]; do
-              echo "service ${{ env.SERVICE_SNAKEMAKE }} unavailable"; sleep 3;
-              docker service ps ${{ env.SERVICE_SNAKEMAKE }} --format "{{.CurrentState}}" | grep Running ;
-              service_up=$?;
-          done
-          echo "service ${{ env.SERVICE_SNAKEMAKE }} up!"
+        run: ./tests/serviceup.sh ${{ env.SERVICE_SNAKEMAKE }}
+
+      - name: Check slurm service
+        shell: bash -l {0}
+        run: ./tests/serviceup.sh ${{ env.SERVICE_SLURM }}
 
       - name: run tests
         shell: bash -l {0}
