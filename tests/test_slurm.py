@@ -34,6 +34,8 @@ class Timer:
         return self
 
     def __exit__(self, *args):
+        if self.verbose:
+            logging.info(f"Elapsed time: {int(self.elapsed_time())}s")
         signal.signal(signal.SIGALRM, self.old_handler)
         signal.alarm(0)
 
