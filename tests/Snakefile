@@ -8,8 +8,8 @@ rule timeout:
     output: "timeout.txt"
     threads: lambda wildcards, attempt: attempt
     shell:
-        "echo Threads: {threads} > {output};"
-        "sleep 80"
+        #"echo Threads: {threads} > {output};"
+        "touch {output}; sleep 80"
 
 rule bar:
     resources:

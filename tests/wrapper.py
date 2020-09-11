@@ -227,7 +227,7 @@ class SnakemakeRunner(SlurmRunner):
             raise DockerException(output.decode())
         m = re.search(regex, output.decode())
         if m is None:
-            self._logger.warn(output.decode())
+            self._logger.warning(f"{cmd}\n{output.decode()}")
         return m
 
 
