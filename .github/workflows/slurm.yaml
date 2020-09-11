@@ -2,6 +2,9 @@ name: Test SnakemakeProfiles/slurm
 env:
   SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:5.23.0--2
   SLURM_IMAGE: giovtorres/docker-centos7-slurm:latest
+  SERVICE: cookiecutter-slurm
+  SERVICE_SNAKEMAKE: cookiecutter-slurm_snakemake
+  SERVICE_SLURM: cookiecutter-slurm_slurm
 
 on: [push, pull_request]
 
@@ -14,7 +17,7 @@ jobs:
       - run: mkdir -p ~/image-cache
 
       - name: cache-conda
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         env:
           CACHE_NUMBER: 0
         with:
@@ -60,28 +63,32 @@ jobs:
 
       - name: docker deploy
         shell: bash -l {0}
-        run: |
-          docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
-          sleep 10
+        run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
 
-      - name: wait for docker stack to initialize
+      - name: Check slurm service
         shell: bash -l {0}
         run: |
-          service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
+          docker service ps ${{ env.SERVICE_SLURM }} --format "{{.CurrentState}}" | grep Running ;
           service_up=$?
           until [ $service_up -eq 0 ]; do
-              echo cookiecutter-slurm unavailable; sleep 1;
-              service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`;
+              echo "service ${{ env.SERVICE_SLURM }} unavailable"; sleep 3;
+              docker service ps ${{ env.SERVICE_SLURM }} --format "{{.CurrentState}}" | grep Running ;
               service_up=$?;
           done
-          echo "cookiecutter-slurm $service up!"
+          echo "service ${{ env.SERVICE_SLURM }} up!"
+
+      - name: Check snakemake service
+        shell: bash -l {0}
+        run: |
+          docker service ps ${{ env.SERVICE_SNAKEMAKE }} --format "{{.CurrentState}}" | grep Running ;
+          service_up=$?
+          until [ $service_up -eq 0 ]; do
+              echo "service ${{ env.SERVICE_SNAKEMAKE }} unavailable"; sleep 3;
+              docker service ps ${{ env.SERVICE_SNAKEMAKE }} --format "{{.CurrentState}}" | grep Running ;
+              service_up=$?;
+          done
+          echo "service ${{ env.SERVICE_SNAKEMAKE }} up!"
 
       - name: run tests
         shell: bash -l {0}
-        run: |
-          service=`docker service ps cookiecutter-slurm_slurm --format "{{.Name}}.{{.ID}}" --no-trunc`
-          docker service ls
-          docker service ps cookiecutter-slurm_slurm
-          docker service logs $service --raw
-          docker exec $service cat /etc/passwd
-          pytest -v -s tests/test_slurm.py::test_slurm_submit
+        run: pytest -v -s --tb=no
