@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 import os
 import re
+import logging
 from docker.models.containers import ExecResult
+from docker.errors import DockerException
 
 
 class SlurmRunner:
@@ -27,12 +29,13 @@ class SlurmRunner:
     def __init__(self, container, data, jobname, advanced=False):
         self._container = container
         self._data = data
-        self._jobname = jobname.lstrip("test_")
+        self._jobname = re.sub("test_", "", jobname)
         self._output = []
         self._exit_code = None
         self._pp = self._process_prefix
         self._cmd = ""
         self._num_cores = 1
+        self._logger = logging.getLogger(str(self))
 
     def _setup_exec_run(self, *args, **kwargs):
         if args:
@@ -48,6 +51,8 @@ class SlurmRunner:
         self._num_cores = kwargs.pop("num_cores", 1)
         self._output = []
         kwargs = self._setup_exec_run(*args, **kwargs)
+        if verbose:
+            self._logger.info(f"'{self.cmd}'")
 
         try:
             proc = self._container.exec_run(
@@ -216,14 +221,20 @@ class SnakemakeRunner(SlurmRunner):
             return False
         if jobid is None:
             jobid = self.external_jobid[which]
-        cmd = f"sacct {options} -j {jobid}"
-        try:
-            (_, output) = self._container.exec_run(cmd)
-        except:
-            raise
-        return re.search(regex, output.decode())
+        cmd = f"sacct -P -b {options} -j {jobid}"
+        (exit_code, output) = self._container.exec_run(cmd)
+        if exit_code != 0:
+            raise DockerException(output.decode())
+        m = re.search(regex, output.decode())
+        if m is None:
+            self._logger.warning(f"{cmd}\n{output.decode()}")
+        return m
 
 
 if "SHELL" in os.environ:
     SlurmRunner.executable(os.environ["SHELL"])
     SnakemakeRunner.executable(os.environ["SHELL"])
+# Try falling back on /bin/bash
+else:
+    SlurmRunner.executable("/bin/bash")
+    SnakemakeRunner.executable("/bin/bash")
