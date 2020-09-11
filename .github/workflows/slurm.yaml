@@ -1,0 +1,78 @@
+name: Test SnakemakeProfiles/slurm
+env:
+  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:5.23.0--2
+  SLURM_IMAGE: giovtorres/docker-centos7-slurm:latest
+  SERVICE: cookiecutter-slurm
+  SERVICE_SNAKEMAKE: cookiecutter-slurm_snakemake
+  SERVICE_SLURM: cookiecutter-slurm_slurm
+
+on: [push, pull_request]
+
+jobs:
+  slurmtest:
+    name: Test slurm profile in docker containers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: mkdir -p ~/image-cache
+
+      - name: cache-conda
+        uses: actions/cache@v2
+        env:
+          CACHE_NUMBER: 0
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('test-environment.yml') }}
+
+      - uses: actions/cache@v2
+        id: cache-images
+        env:
+          CACHE_NUMBER: 1
+        with:
+          path: ~/image-cache
+          key: image-cache-${{ runner.os }}-${{ env.CACHE_NUMBER }}-${{ env.SNAKEMAKE_IMAGE }}-${{ env.SLURM_IMAGE }}
+
+      - name: install miniconda
+        uses: goanpeca/setup-miniconda@v1
+        with:
+          mamba-version: "*"
+          channels: conda-forge,bioconda,default
+          channel-priority: true
+          environment-file: test-environment.yml
+          use-only-tar-bz2: true
+          activate-environment: slurm-test
+
+      - name: docker swarm init
+        run: docker swarm init
+
+      - if: steps.cache-images.outputs.cache-hit != 'true'
+        run: |
+          docker pull ${{ env.SNAKEMAKE_IMAGE }}
+          docker save -o ~/image-cache/snakemake.tar ${{ env.SNAKEMAKE_IMAGE }}
+
+      - if: steps.cache-images.outputs.cache-hit == 'true'
+        run: docker load -i ~/image-cache/snakemake.tar
+
+      - if: steps.cache-images.outputs.cache-hit != 'true'
+        run: |
+          docker pull ${{ env.SLURM_IMAGE }}
+          docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
+
+      - if: steps.cache-images.outputs.cache-hit == 'true'
+        run: docker load -i ~/image-cache/slurm.tar
+
+      - name: docker deploy
+        shell: bash -l {0}
+        run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
+
+      - name: Check snakemake service
+        shell: bash -l {0}
+        run: ./tests/serviceup.sh ${{ env.SERVICE_SNAKEMAKE }}
+
+      - name: Check slurm service
+        shell: bash -l {0}
+        run: ./tests/serviceup.sh ${{ env.SERVICE_SLURM }}
+
+      - name: run tests
+        shell: bash -l {0}
+        run: pytest -v -s

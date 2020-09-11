@@ -3,7 +3,7 @@ channels:
   - bioconda
   - default
 dependencies:
-  - python ==3.6
+  - python
   - pip
   - pytest
   - pytest-runner
@@ -12,5 +12,5 @@ dependencies:
   - pep8
   - pytest-cookies >=0.4.0
   - pyflakes
-  - snakemake ==5.13.0
+  - snakemake
   - urllib3
