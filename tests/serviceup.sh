@@ -6,7 +6,7 @@
 
 SERVICE=$1
 COUNT=1
-MAXCOUNT=10
+MAXCOUNT=20
 
 docker service ps $SERVICE --format "{{.CurrentState}}" 2>/dev/null | grep Running
 service_up=$?
