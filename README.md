@@ -1,4 +1,4 @@
-![Test SnakemakeProfiles/slurm](https://github.com/percyfal/slurm/workflows/Test%20SnakemakeProfiles/slurm/badge.svg)
+![Test SnakemakeProfiles/slurm](https://github.com/Snakemake-Profiles/slurm/workflows/Test%20SnakemakeProfiles/slurm/badge.svg)
 
 # slurm
 
