@@ -34,6 +34,14 @@ CLUSTERCONFIG = py.path.local(
     os.path.join(os.path.dirname(__file__), "cluster-config.yaml")
 )
 
+# Check services
+client = docker.from_env()
+service_list = client.services.list(filters={"name": "cookiecutter-slurm_slurm"})
+service_up = pytest.mark.skipif(
+    len(service_list) == 0,
+    reason="docker service cookiecutter-slurm is down; deploy docker-compose.yaml",
+)
+
 
 def pytest_configure(config):
     pytest.local_user_id = LOCAL_USER_ID
@@ -105,8 +113,6 @@ def setup_sacctmgr(container):
         'sacctmgr --immediate add account none,test Cluster=linux Description="none" Organization="none"\'',
     ]
     cmd = " ".join(cmd_args)
-    print("Exit code from setting up account manager: ", exit_code)
-    print(output.decode().strip())
     if int(output.decode().strip()) == 0:
         logger.info("Setting up slurm partitions...")
         (exit_code, output) = container.exec_run(
@@ -115,7 +121,6 @@ def setup_sacctmgr(container):
         logger.info("...setting up slurm partitions done!")
     if exit_code:
         logger.critical("Failed to setup account")
-        print(output.decode().strip())
         sys.exit()
 
 
@@ -148,20 +153,15 @@ def data(tmpdir_factory, _cookiecutter_config_file):
 def cluster(data):
     client = docker.from_env()
     service_list = client.services.list(filters={"name": "cookiecutter-slurm_slurm"})
-    logger.info(service_list)
     s = client.services.get(service_list[0].id)
-    logger.info(s)
     container = client.containers.get(
         s.tasks()[0]["Status"]["ContainerStatus"]["ContainerID"]
     )
-    logger.info(container)
     add_slurm_user(pytest.local_user_id, container)
     setup_sacctmgr(container)
     link_python(container)
     # Hack: modify first line in snakemake file
     container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:", "/opt/local/bin/snakemake"])
-    (exit_code, output) = container.exec_run(["sinfo"], stream=False)
-    print(output.decode().strip())
     return container, data
 
 

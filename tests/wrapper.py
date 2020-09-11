@@ -4,6 +4,7 @@ import os
 import re
 import logging
 from docker.models.containers import ExecResult
+from docker.errors import DockerException
 
 
 class SlurmRunner:
@@ -220,12 +221,14 @@ class SnakemakeRunner(SlurmRunner):
             return False
         if jobid is None:
             jobid = self.external_jobid[which]
-        cmd = f"sacct {options} -j {jobid}"
-        try:
-            (_, output) = self._container.exec_run(cmd)
-        except:
-            raise
-        return re.search(regex, output.decode())
+        cmd = f"sacct -P -b {options} -j {jobid}"
+        (exit_code, output) = self._container.exec_run(cmd)
+        if exit_code != 0:
+            raise DockerException(output.decode())
+        m = re.search(regex, output.decode())
+        if m is None:
+            self._logger.warn(output.decode())
+        return m
 
 
 if "SHELL" in os.environ:
