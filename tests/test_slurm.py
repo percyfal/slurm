@@ -48,7 +48,7 @@ def test_timeout(smk_runner):
     with pytest.raises(TimeOut):
         with Timer():
             smk_runner.exec_run("timeout.txt", options=opts, profile=None)
-    assert smk_runner.check_jobstatus("TIMEOUT")
+    assert smk_runner.check_jobstatus("TIMEOUT|NODE_FAIL")
 
 
 @service_up
