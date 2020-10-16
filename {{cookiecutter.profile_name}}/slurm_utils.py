@@ -10,6 +10,7 @@ from snakemake.io import Wildcards
 from snakemake.utils import SequenceFormatter, AlwaysQuotedFormatter, QuotedFormatter
 from snakemake.exceptions import WorkflowError
 
+
 def parse_jobscript():
     """Minimal CLI to require/only accept single positional argument."""
     p = argparse.ArgumentParser(description="SLURM snakemake submit script")
@@ -20,7 +21,11 @@ def parse_jobscript():
 def parse_sbatch_defaults(parsed):
     """Unpack SBATCH_DEFAULTS."""
     d = parsed.split() if type(parsed) == str else parsed
-    args = {k.strip().strip("-"): v.strip() for k, v in [a.split("=") for a in d]}
+    args = {}
+    for l in [a.split("=") for a in d]:
+        k = l[0].strip().strip("-")
+        v = l[1].strip() if len(l) == 2 else None
+        args[k] = v
     return args
 
 
@@ -34,6 +39,7 @@ def load_cluster_config(path):
     if "__default__" not in dcc:
         dcc["__default__"] = {}
     return dcc
+
 
 # adapted from format function in snakemake.utils
 def format(_pattern, _quote_all=False, **kwargs):
@@ -56,27 +62,25 @@ def format(_pattern, _quote_all=False, **kwargs):
             "have to be escaped by repeating them "
         )
 
+
 #  adapted from Job.format_wildcards in snakemake.jobs
 def format_wildcards(string, job_properties):
     """ Format a string with variables from the job. """
-    
+
     class Job(object):
         def __init__(self, job_properties):
             for key in job_properties:
                 setattr(self, key, job_properties[key])
+
     job = Job(job_properties)
-    if 'params' in job_properties:
-      job._format_params = Wildcards(fromdict=job_properties['params'])
+    if "params" in job_properties:
+        job._format_params = Wildcards(fromdict=job_properties["params"])
     else:
-      job._format_params = None
-    job._format_wildcards = Wildcards(fromdict=job_properties['wildcards'])
+        job._format_params = None
+    job._format_wildcards = Wildcards(fromdict=job_properties["wildcards"])
     _variables = dict()
     _variables.update(
-        dict(
-            params=job._format_params,
-            wildcards=job._format_wildcards,
-            rule=job.rule
-        )
+        dict(params=job._format_params, wildcards=job._format_wildcards, rule=job.rule)
     )
     try:
         return format(string, **_variables)
@@ -89,6 +93,7 @@ def format_wildcards(string, job_properties):
             "IndexError with group job {}: {}".format(job.jobid, str(ex))
         )
 
+
 # adapted from ClusterExecutor.cluster_params function in snakemake.executor
 def format_values(dictionary, job_properties):
     formatted = dictionary.copy()
@@ -97,13 +102,13 @@ def format_values(dictionary, job_properties):
             try:
                 formatted[key] = format_wildcards(value, job_properties)
             except NameError as e:
-                msg = (
-                    "Failed to format cluster config "
-                    "entry for job {}.".format(job_properties['rule'])
+                msg = "Failed to format cluster config " "entry for job {}.".format(
+                    job_properties["rule"]
                 )
                 raise WorkflowError(msg, e)
     return formatted
-    
+
+
 def convert_job_properties(job_properties, resource_mapping={}):
     options = {}
     resources = job_properties.get("resources", {})
@@ -125,17 +130,30 @@ def ensure_dirs_exist(path):
     return
 
 
+def format_sbatch_options(**sbatch_options):
+    """Format sbatch options"""
+    options = []
+    for k, v in sbatch_options.items():
+        val = ""
+        if v is not None:
+            val = f"={v}"
+        options.append(f"--{k}{val}")
+    return options
+
+
 def submit_job(jobscript, **sbatch_options):
     """Submit jobscript and return jobid."""
-    optsbatch_options = [f"--{k}={v}" for k, v in sbatch_options.items()]
+    options = format_sbatch_options(**sbatch_options)
     try:
-        res = subprocess.check_output(["sbatch"] + optsbatch_options + [jobscript])
+        res = subprocess.check_output(
+            ["sbatch"] + ["--parsable"] + options + [jobscript]
+        )
     except subprocess.CalledProcessError as e:
         raise e
     # Get jobid
     res = res.decode()
     try:
-        jobid = re.search(r"Submitted batch job (\d+)", res).group(1)
+        jobid = re.search(r"(\d+)", res).group(1)
     except Exception as e:
         raise e
     return jobid
