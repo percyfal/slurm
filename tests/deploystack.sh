@@ -2,20 +2,25 @@
 #
 # Deploy docker stack
 #
+# Compose file
+DOCKER_COMPOSE=${DOCKER_COMPOSE:=docker-compose.yaml}
 
 # Images
-SNAKEMAKE_IMAGE=quay.io/biocontainers/snakemake-minimal:5.26.1--py_1
-SLURM_IMAGE=giovtorres/docker-centos7-slurm:latest
+SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake-minimal:5.26.1--py_1}
+SLURM_IMAGE=${SLURM_IMAGE:=giovtorres/docker-centos7-slurm:latest}
 
-docker pull -q $SNAKEMAKE_IMAGE
-docker pull -q $SLURM_IMAGE
+if [ $CI ]; then
+    echo "Running CI; skipping docker pull"
+else
+    docker pull -q $SNAKEMAKE_IMAGE
+    docker pull -q $SLURM_IMAGE
+fi
 
 # Stack and service config
 STACK_NAME=cookiecutter-slurm
 SLURM_SERVICE=${STACK_NAME}_slurm
 SNAKEMAKE_SERVICE=${STACK_NAME}_snakemake
 LOCAL_USER_ID=$(id -u)
-
 
 ##############################
 ## Functions
