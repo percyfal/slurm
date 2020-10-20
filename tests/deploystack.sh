@@ -114,7 +114,7 @@ docker service ps $SLURM_SERVICE --format "{{.CurrentState}}" 2>/dev/null | grep
 service_up=$?
 
 if [ $service_up -eq 1 ]; then
-    docker stack deploy --with-registry-auth -c docker-compose.yaml $STACK_NAME;
+    docker stack deploy --with-registry-auth -c $DOCKER_COMPOSE $STACK_NAME;
 fi
 
 service_up $SLURM_SERVICE
