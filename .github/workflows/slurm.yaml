@@ -63,9 +63,9 @@ jobs:
       - name: docker deploy
         shell: bash -l {0}
         env:
-          DOCKER_COMPOSE: env.DOCKER_COMPOSE
-          SNAKEMAKE_IMAGE: env.SNAKEMAKE_IMAGE
-          SLURM_IMAGE: env.SLURM_IMAGE
+          DOCKER_COMPOSE: ${{ env.DOCKER_COMPOSE }}
+          SNAKEMAKE_IMAGE: ${{ env.SNAKEMAKE_IMAGE }}
+          SLURM_IMAGE: ${{ env.SLURM_IMAGE }}
         run: ./tests/deploystack.sh
 
       - name: run tests
