@@ -64,15 +64,7 @@ jobs:
 
       - name: docker deploy
         shell: bash -l {0}
-        run: docker stack deploy --with-registry-auth -c tests/docker-compose.yaml cookiecutter-slurm
-
-      - name: Check snakemake service
-        shell: bash -l {0}
-        run: ./tests/serviceup.sh ${{ env.SERVICE_SNAKEMAKE }}
-
-      - name: Check slurm service
-        shell: bash -l {0}
-        run: ./tests/serviceup.sh ${{ env.SERVICE_SLURM }}
+        run: ./tests/deploystack.sh
 
       - name: run tests
         shell: bash -l {0}
