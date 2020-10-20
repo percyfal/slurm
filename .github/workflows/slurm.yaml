@@ -1,6 +1,6 @@
 name: Test SnakemakeProfiles/slurm
 env:
-  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:5.23.0--2
+  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake-minimal:5.26.1--py_1
   SLURM_IMAGE: giovtorres/docker-centos7-slurm:latest
   SERVICE: cookiecutter-slurm
   SERVICE_SNAKEMAKE: cookiecutter-slurm_snakemake
