@@ -5,8 +5,6 @@ import time
 from timeit import default_timer
 import logging
 
-logging.getLogger("cookiecutter").setLevel(logging.DEBUG)
-
 
 class TimeOut(Exception):
     pass
@@ -51,8 +49,8 @@ def test_no_timeout(smk_runner):
 def test_timeout(smk_runner):
     """Test that rule excessive runtime resources times out"""
     opts = (
-        f'--cluster "sbatch -p {smk_runner.partition} ',
-        '-c 1 -t {{resources.runtime}}" --attempt 1',
+        f'--cluster "sbatch -p {smk_runner.partition} '
+        '-c 1 -t {resources.runtime}" --attempt 1'
     )
     with pytest.raises(TimeOut):
         with Timer():
@@ -78,11 +76,11 @@ def test_slurm_submit(smk_runner):
     """Test that slurm-submit.py works"""
     jobscript = smk_runner.script("jobscript.sh")
     jobscript.write(
-        "#!/bin/bash\n"
-        + (
-            '# properties = {"cluster": {"job-name": "sm-job"},',
-            '"input": [], "output": [], "wildcards": {}, "params": {},',
-            '"rule": "slurm_submit"}\n',
+        (
+            "#!/bin/bash\n"
+            '# properties = {"cluster": {"job-name": "sm-job"},'
+            '"input": [], "output": [], "wildcards": {}, "params": {},'
+            '"rule": "slurm_submit"}\n'
         )
     )
     _, output = smk_runner.exec_run(

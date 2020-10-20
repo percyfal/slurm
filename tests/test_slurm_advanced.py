@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import pytest
-import logging
-
-logging.getLogger("cookiecutter").setLevel(logging.INFO)
 
 
 @pytest.mark.slow

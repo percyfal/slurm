@@ -56,6 +56,7 @@ def data(tmpdir_factory, _cookiecutter_config_file):
         f"partition={pytest.partition} "
         "output=logs/slurm-%j.out error=logs/slurm-%j.err"
     )
+    logging.getLogger("cookiecutter").setLevel(logging.INFO)
     c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
     c._new_output_dir = lambda: str(p.join("slurm"))
     c.bake(extra_context={"sbatch_defaults": defaults})
@@ -100,8 +101,9 @@ def slurm(request):
 @pytest.fixture
 def smk_runner(slurm, data, request):
     advanced = re.search("advanced", basename(request.fspath)) is not None
-    _, partitions = slurm.exec_run('sinfo -h -o "%P"')
+    _, partitions = slurm.exec_run('sinfo -h -o "%P"', stream=False)
     plist = [p.strip("*") for p in partitions.decode().split("\n") if p != ""]
+
     if pytest.partition not in plist:
         pytest.skip(
             "partition '{}' not in cluster partitions '{}'".format(

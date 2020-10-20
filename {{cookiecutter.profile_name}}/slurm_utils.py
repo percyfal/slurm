@@ -236,10 +236,10 @@ def _get_cluster_configuration(partition):
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
     m = re.search(
         (
-            r"(?P<partition>\S+)\s+(?P<cpus>\d+)",
-            r"\s+(?P<memory>\S+)\s+((?P<days>\d+)-)",
-            r"?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)",
-            r"\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)",
+            r"(?P<partition>\S+)\s+(?P<cpus>\d+)"
+            r"\s+(?P<memory>\S+)\s+((?P<days>\d+)-)"
+            r"?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)"
+            r"\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)"
         ),
         res.stdout.decode(),
     )

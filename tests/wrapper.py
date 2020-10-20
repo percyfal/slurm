@@ -24,8 +24,8 @@ class ShellContainer(Model):
     def short_id(self):
         return self.id
 
-    def exec_run(self, cmd, stream=True, detach=False, **kwargs):
-        stdout = sp.PIPE if stream else kwargs.pop("stdout", STDOUT)
+    def exec_run(self, cmd, stream=False, detach=False, **kwargs):
+        stdout = kwargs.pop("stdout", sp.PIPE)
         stderr = kwargs.pop("stderr", STDOUT)
         close_fds = sys.platform != "win32"
         executable = os.environ.get("SHELL", None)
@@ -41,13 +41,14 @@ class ShellContainer(Model):
 
         def iter_stdout(proc):
             for line in proc.stdout:
-                yield line[:-1].decode()
+                yield line[:-1]
 
         if detach:
             return ExecResult(None, "")
+
         if stream:
             return ExecResult(None, iter_stdout(proc))
-        return ExecResult(proc.wait(), proc.stdout)
+        return ExecResult(proc.returncode, proc.stdout.read())
 
 
 class SnakemakeRunner:
@@ -91,7 +92,7 @@ class SnakemakeRunner:
         d = "slurm-advanced" if advanced else "slurm"
         self._profile = self._data.join(d).join("slurm")
 
-    def exec_run(self, cmd, stream=True, **kwargs):
+    def exec_run(self, cmd, stream=False, **kwargs):
         return self._container.exec_run(cmd, stream=stream, **kwargs)
 
     def make_target(self, target, stream=True, asynchronous=False, **kwargs):
