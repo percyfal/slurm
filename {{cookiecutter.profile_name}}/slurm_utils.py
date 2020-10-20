@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+from os.path import dirname
 import re
 import math
 import argparse
@@ -7,7 +8,9 @@ import subprocess
 
 from snakemake import io
 from snakemake.io import Wildcards
-from snakemake.utils import SequenceFormatter, AlwaysQuotedFormatter, QuotedFormatter
+from snakemake.utils import SequenceFormatter
+from snakemake.utils import AlwaysQuotedFormatter
+from snakemake.utils import QuotedFormatter
 from snakemake.exceptions import WorkflowError
 
 
@@ -22,17 +25,21 @@ def parse_sbatch_defaults(parsed):
     """Unpack SBATCH_DEFAULTS."""
     d = parsed.split() if type(parsed) == str else parsed
     args = {}
-    for l in [a.split("=") for a in d]:
-        k = l[0].strip().strip("-")
-        v = l[1].strip() if len(l) == 2 else None
+    for keyval in [a.split("=") for a in d]:
+        k = keyval[0].strip().strip("-")
+        v = keyval[1].strip() if len(keyval) == 2 else None
         args[k] = v
     return args
 
 
 def load_cluster_config(path):
-    """Load config to dict either from absolute path or relative to profile dir."""
+    """Load config to dict
+
+    Load configuration to dict either from absolute path or relative
+    to profile dir.
+    """
     if path:
-        path = os.path.join(os.path.dirname(__file__), os.path.expandvars(path))
+        path = os.path.join(dirname(__file__), os.path.expandvars(path))
         dcc = io.load_configfile(path)
     else:
         dcc = {}
@@ -42,7 +49,7 @@ def load_cluster_config(path):
 
 
 # adapted from format function in snakemake.utils
-def format(_pattern, _quote_all=False, **kwargs):
+def format(_pattern, _quote_all=False, **kwargs):  # noqa: A001
     """Format a pattern in Snakemake style.
     This means that keywords embedded in braces are replaced by any variable
     values that are available in the current namespace.
@@ -56,7 +63,7 @@ def format(_pattern, _quote_all=False, **kwargs):
         return fmt.format(_pattern, **kwargs)
     except KeyError as ex:
         raise NameError(
-            "The name {} is unknown in this context. Please "
+            f"The name {ex} is unknown in this context. Please "
             "make sure that you defined that variable. "
             "Also note that braces not used for variable access "
             "have to be escaped by repeating them "
@@ -109,8 +116,10 @@ def format_values(dictionary, job_properties):
     return formatted
 
 
-def convert_job_properties(job_properties, resource_mapping={}):
+def convert_job_properties(job_properties, resource_mapping=None):
     options = {}
+    if resource_mapping is None:
+        resource_mapping = {}
     resources = job_properties.get("resources", {})
     for k, v in resource_mapping.items():
         options.update({k: resources[i] for i in v if i in resources})
@@ -122,7 +131,7 @@ def convert_job_properties(job_properties, resource_mapping={}):
 
 def ensure_dirs_exist(path):
     """Ensure output folder for Slurm log files exist."""
-    di = os.path.dirname(path)
+    di = dirname(path)
     if di == "":
         return
     if not os.path.exists(di):
@@ -160,8 +169,7 @@ def submit_job(jobscript, **sbatch_options):
 
 
 def advanced_argument_conversion(arg_dict):
-    """Experimental adjustment of sbatch arguments to the given or default partition.
-    """
+    """Experimental adjustment of sbatch arguments to the given or default partition."""
     adjusted_args = {}
 
     partition = arg_dict.get("partition", None) or _get_default_partition()
@@ -227,11 +235,16 @@ def _get_cluster_configuration(partition):
     )
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
     m = re.search(
-        r"(?P<partition>\S+)\s+(?P<cpus>\d+)\s+(?P<memory>\S+)\s+((?P<days>\d+)-)?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)",
+        (
+            r"(?P<partition>\S+)\s+(?P<cpus>\d+)",
+            r"\s+(?P<memory>\S+)\s+((?P<days>\d+)-)",
+            r"?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)",
+            r"\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)",
+        ),
         res.stdout.decode(),
     )
     d = m.groupdict()
-    if not "days" in d or not d["days"]:
+    if "days" not in d or not d["days"]:
         d["days"] = 0
     d["time"] = (
         int(d["days"]) * 24 * 60
@@ -244,7 +257,7 @@ def _get_cluster_configuration(partition):
 
 def _get_features_and_memory(partition):
     """Retrieve features and memory for a partition in the cluster
-    configuration. """
+    configuration."""
     cmd = " ".join(['sinfo -e -O "memory,features_act"', "-h -p {}".format(partition)])
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
     mem_feat = []

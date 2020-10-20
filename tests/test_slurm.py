@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from conftest import service_up
 import pytest
 import signal
 import time
@@ -40,51 +39,58 @@ class Timer:
         signal.alarm(0)
 
 
-@service_up
 @pytest.mark.slow
 def test_no_timeout(smk_runner):
     """Test that rule that updates runtime doesn't timeout"""
-    smk_runner.exec_run("timeout.txt")
+    smk_runner.make_target("timeout.txt")
     assert "Trying to restart" in smk_runner.output
     assert "Finished job" in smk_runner.output
 
 
-@service_up
 @pytest.mark.slow
 def test_timeout(smk_runner):
     """Test that rule excessive runtime resources times out"""
-    opts = '--cluster "sbatch -p normal -c 1 -t {resources.runtime}" --attempt 1'
+    opts = (
+        f'--cluster "sbatch -p {smk_runner.partition} ',
+        '-c 1 -t {{resources.runtime}}" --attempt 1',
+    )
     with pytest.raises(TimeOut):
         with Timer():
-            smk_runner.exec_run("timeout.txt", options=opts, profile=None)
+            smk_runner.make_target("timeout.txt", options=opts, profile=None)
     assert smk_runner.check_jobstatus("TIMEOUT|NODE_FAIL")
 
 
-@service_up
 def test_profile_status_running(smk_runner):
     """Test that slurm-status.py catches RUNNING status"""
-    opts = '--cluster "sbatch -p normal -c 1 -t 1"'
-    smk_runner.exec_run("timeout.txt", options=opts, profile=None, asynchronous=True)
+    opts = f'--cluster "sbatch -p {smk_runner.partition} -c 1 -t 1"'
+    smk_runner.make_target(
+        "timeout.txt", options=opts, profile=None, asynchronous=True
+    )  # noqa: E501
     time.sleep(5)
     jid = smk_runner.external_jobid[0]
-    output = smk_runner.exec_run(
-        cmd=f"{smk_runner.slurm_status} {jid}", verbose=False, iterable=False
+    _, output = smk_runner.exec_run(
+        cmd=f"{smk_runner.slurm_status} {jid}", stream=False
     )
-    assert output.strip() == "running"
+    assert output.decode().strip() == "running"
 
 
-@service_up
 def test_slurm_submit(smk_runner):
     """Test that slurm-submit.py works"""
     jobscript = smk_runner.script("jobscript.sh")
     jobscript.write(
         "#!/bin/bash\n"
-        + '# properties = {"cluster": {"job-name": "sm-job"}, "input": [], "output": [], "wildcards": {}, "params": {}, "rule": "slurm_submit"}\n'
+        + (
+            '# properties = {"cluster": {"job-name": "sm-job"},',
+            '"input": [], "output": [], "wildcards": {}, "params": {},',
+            '"rule": "slurm_submit"}\n',
+        )
     )
-    out = smk_runner.exec_run(
-        cmd=f"{smk_runner.slurm_submit} {jobscript}", iterable=False
+    _, output = smk_runner.exec_run(
+        cmd=f"{smk_runner.slurm_submit} {jobscript}", stream=False
     )
     time.sleep(5)
     assert smk_runner.check_jobstatus(
-        "sm-job", options="--format=jobname", jobid=int(out.strip())
+        "sm-job",
+        options="--format=jobname",
+        jobid=int(output.decode().strip()),  # noqa: E501
     )

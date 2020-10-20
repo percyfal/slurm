@@ -54,23 +54,22 @@ function modify_slurm_conf {
     container=$1
     slurmconf=/etc/slurm/slurm.conf
 
-    docker exec $container /bin/bash -c "cat $slurmconf" | grep "NEW COMPUTE NODE DEFINITIONS"
+    docker exec $container /bin/bash -c "cat $slurmconf" | grep -q "NEW COMPUTE NODE DEFINITIONS"
     if [ $? -eq 1 ]; then
 	echo "Rewriting /etc/slurm/slurm.conf"
-        # docker exec $container /bin/bash -c 'sacctmgr --immediate add cluster name=linux'
-	# Change consumable resources to Core; Setting CR_Core_Memory fails for some reason
-        # docker exec $container /bin/bash -c "sed -i -e \"s/CR_CPU_Memory/CR_Core/g\" $slurmconf ;"
+	# Change consumable resources to Core, else threads configuration fails
+        docker exec $container /bin/bash -c "sed -i -e \"s/CR_CPU_Memory/CR_Core/g\" $slurmconf ;"
 	# Comment out node names and partition names that are to be redefined
 	docker exec $container /bin/bash -c "sed -i -e \"s/^GresTypes/# GresTypes/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^NodeName/# NodeName/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^PartitionName/# PartitionName/g\" $slurmconf ;"
 	echo "  setting up slurm partitions..."
         docker exec $container /bin/bash -c "echo \"$SLURM_CONF\" >> $slurmconf ; "
-	# Restart services
+	# Restart services; needed for sacct; see https://github.com/giovtorres/docker-centos7-slurm/issues/3
 	echo "  restarting slurm services..."
+	docker exec $container /bin/bash -c 'sacctmgr --immediate add cluster name=linux'
 	docker exec $container supervisorctl restart slurmdbd
 	docker exec $container supervisorctl restart slurmctld
-	docker exec $container /bin/bash -c 'sacctmgr --immediate add cluster name=linux'
         docker exec $container /bin/bash -c "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\""
     fi
 }
@@ -122,8 +121,8 @@ CONTAINER=$(docker ps | grep cookiecutter-slurm_slurm | awk '{print $1}')
 add_slurm_user $LOCAL_USER_ID $CONTAINER
 
 # Fix snakemake header to point to /opt/local/bin
-docker exec $CONTAINER /bin/bash -c "head -1 /opt/local/bin/snakemake" | grep "/usr/local/bin"
-if [ $? -eq 1 ]; then
+docker exec $CONTAINER /bin/bash -c "head -1 /opt/local/bin/snakemake" | grep -q "/usr/local/bin"
+if [ $? -eq 0 ]; then
     echo "Rewriting snakemake header to point to /opt/local/bin"
     docker exec $CONTAINER /bin/bash -c 'sed -i -e "s:/usr:/opt:" /opt/local/bin/snakemake'
 fi
