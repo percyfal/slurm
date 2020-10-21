@@ -12,7 +12,17 @@ from wrapper import SnakemakeRunner, ShellContainer
 
 
 def pytest_addoption(parser):
-    parser.addoption("--partition", action="store", default="normal", type=str)
+    group = parser.getgroup("slurm")
+    group.addoption(
+        "--partition",
+        action="store",
+        default="normal",
+        help="partition to run tests on",
+    )
+    group.addoption("--account", action="store", default=None, help="slurm account")
+    group.addoption(
+        "--slow", action="store_true", help="include slow tests", default=False
+    )
 
 
 def pytest_configure(config):
@@ -22,6 +32,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark tests as slow")
     setup_logging(config.getoption("--log-level"))
     pytest.partition = config.getoption("--partition")
+    pytest.account = ""
+    if config.getoption("--account"):
+        pytest.account = "--account={}".format(config.getoption("--account"))
 
 
 def setup_logging(level):
@@ -53,8 +66,8 @@ def data(tmpdir_factory, _cookiecutter_config_file):
     cookie_template = pjoin(os.path.abspath(dname), os.pardir)
     output_factory = tmpdir_factory.mktemp
     defaults = (
-        f"partition={pytest.partition} "
-        "output=logs/slurm-%j.out error=logs/slurm-%j.err"
+        f"--partition={pytest.partition} {pytest.account} "
+        "--output=logs/slurm-%j.out --error=logs/slurm-%j.err"
     )
     logging.getLogger("cookiecutter").setLevel(logging.INFO)
     c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
@@ -74,17 +87,17 @@ def data(tmpdir_factory, _cookiecutter_config_file):
 
 @pytest.fixture(scope="session")
 def slurm(request):
-    if shutil.which("sbatch"):
+    if shutil.which("sbatch") is not None:
         return ShellContainer()
     else:
         client = docker.from_env()
-        # Preferably return container id here
         container_list = client.containers.list(
             filters={"name": "cookiecutter-slurm_slurm"}
         )
         container = container_list[0] if len(container_list) > 0 else None
         if container:
             return container
+
     msg = [
         (
             "\n   no sbatch or docker stack 'cookiecutter-slurm' running;",
@@ -96,6 +109,31 @@ def slurm(request):
         ),
     ]
     pytest.skip("\n".join(msg))
+
+
+def teardown(request):
+    """Shutdown snakemake processes that are waiting for slurm"""
+    logging.info(f"\n\nTearing down test '{request.node.name}'")
+    basetemp = request.config.getoption("basetemp")
+    from subprocess import Popen, PIPE
+    import psutil
+
+    for root, _, files in os.walk(basetemp, topdown=False):
+        for name in files:
+            if not root.endswith(".snakemake/log"):
+                continue
+            try:
+                fn = os.path.join(root, name)
+                proc = Popen(["lsof", "-F", "p", fn], stdout=PIPE, stderr=PIPE)
+                pid = proc.communicate()[0].decode().strip().strip("p")
+                if pid:
+                    p = psutil.Process(int(pid))
+                    logging.info(f"Killing process {p.pid} related to {fn}")
+                    p.kill()
+            except psutil.NoSuchProcess as e:
+                logging.warning(e)
+            except ValueError as e:
+                logging.warning(e)
 
 
 @pytest.fixture
@@ -110,4 +148,8 @@ def smk_runner(slurm, data, request):
                 pytest.partition, ",".join(plist)
             )
         )
-    return SnakemakeRunner(slurm, data, request.node.name, advanced, pytest.partition)
+
+    yield SnakemakeRunner(slurm, data, request.node.name, advanced, pytest.partition)
+
+    if isinstance(slurm, ShellContainer):
+        teardown(request)
