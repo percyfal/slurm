@@ -3,8 +3,13 @@ import pytest
 import time
 
 
+@pytest.fixture
+def profile(cookie_factory, data):
+    cookie_factory()
+
+
 @pytest.mark.slow
-def test_no_timeout(smk_runner):
+def test_no_timeout(smk_runner, profile):
     """Test that rule that updates runtime doesn't timeout"""
     smk_runner.make_target("timeout.txt")
     assert "Trying to restart" in smk_runner.output
@@ -12,7 +17,7 @@ def test_no_timeout(smk_runner):
 
 
 @pytest.mark.slow
-def test_timeout(smk_runner):
+def test_timeout(smk_runner, profile):
     """Test that rule excessive runtime resources times out"""
     opts = (
         f'--cluster "sbatch --parsable -p {smk_runner.partition} {pytest.account} '
@@ -30,9 +35,12 @@ def test_timeout(smk_runner):
     assert smk_runner.check_jobstatus("TIMEOUT|NODE_FAIL")
 
 
-def test_profile_status_running(smk_runner):
+def test_profile_status_running(smk_runner, profile):
     """Test that slurm-status.py catches RUNNING status"""
-    opts = f'--cluster "sbatch -p {smk_runner.partition} {pytest.account} -c 1 -t 1"'
+    opts = (
+        f'--cluster "sbatch --parsable -p {smk_runner.partition}'
+        f'{pytest.account} -c 1 -t 1"'
+    )
     smk_runner.make_target(
         "timeout.txt", options=opts, profile=None, asynchronous=True
     )  # noqa: E501
@@ -44,7 +52,7 @@ def test_profile_status_running(smk_runner):
     assert output.decode().strip() == "running"
 
 
-def test_slurm_submit(smk_runner):
+def test_slurm_submit(smk_runner, profile):
     """Test that slurm-submit.py works"""
     jobscript = smk_runner.script("jobscript.sh")
     jobscript.write(

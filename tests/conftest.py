@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-from os.path import basename, join as pjoin
+from os.path import join as pjoin
 import re
 import py
 import pytest
@@ -58,9 +58,10 @@ def datadir(tmpdir_factory):
 
 @pytest.fixture
 def datafile(datadir):
-    def _datafile(fn):
-        src = py.path.local(pjoin(pytest.dname, fn))
-        dst = datadir.join(fn)
+    def _datafile(src, dst=None, basedir=pytest.dname):
+        dst = src if dst is None else dst
+        src = py.path.local(pjoin(basedir, src))
+        dst = datadir.join(dst)
         src.copy(dst)
         return dst
 
@@ -70,26 +71,35 @@ def datafile(datadir):
 @pytest.fixture
 def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
     logging.getLogger("cookiecutter").setLevel(logging.INFO)
-    _defaults = (
+    _sbatch_defaults = (
         f"--partition={pytest.partition} {pytest.account} "
         "--output=logs/slurm-%j.out --error=logs/slurm-%j.err"
     )
 
-    def _cookie_factory(defaults=_defaults):
+    def _cookie_factory(
+        sbatch_defaults=_sbatch_defaults,
+        advanced="no",
+        cluster_name=None,
+        cluster_config=None,
+    ):
         cookie_template = pjoin(os.path.abspath(pytest.dname), os.pardir)
         output_factory = tmpdir_factory.mktemp
         c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
-        c._new_output_dir = lambda: str(datadir.join("slurm"))
-        c.bake(extra_context={"sbatch_defaults": defaults})
+        c._new_output_dir = lambda: str(datadir)
+        extra_context = {"sbatch_defaults": sbatch_defaults, "advanced": advanced}
+        if cluster_name is not None:
+            extra_context["cluster_name"] = cluster_name
+        if cluster_config is not None:
+            extra_context["cluster_config"] = cluster_config
+        c.bake(extra_context=extra_context)
 
     return _cookie_factory
 
 
 @pytest.fixture
-def data(tmpdir_factory, request, datafile, cookie_factory):
+def data(tmpdir_factory, request, datafile):
     datafile("Snakefile")
     ccfile = datafile("cluster-config.yaml")
-    cookie_factory()
     return py.path.local(ccfile.dirname)
 
 
@@ -145,8 +155,7 @@ def teardown(request):
 
 
 @pytest.fixture
-def smk_runner(slurm, data, request):
-    advanced = re.search("advanced", basename(request.fspath)) is not None
+def smk_runner(slurm, datadir, request):
     _, partitions = slurm.exec_run('sinfo -h -o "%P"', stream=False)
     plist = [p.strip("*") for p in partitions.decode().split("\n") if p != ""]
     markers = [m.name for m in request.node.iter_markers()]
@@ -166,7 +175,7 @@ def smk_runner(slurm, data, request):
     if not slow and "slow" in markers:
         pytest.skip(f"'{request.node.name}' is a slow test; activate with --slow flag")
 
-    yield SnakemakeRunner(slurm, data, request.node.name, advanced, pytest.partition)
+    yield SnakemakeRunner(slurm, datadir, request.node.name, pytest.partition)
 
     if isinstance(slurm, ShellContainer):
         teardown(request)

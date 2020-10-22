@@ -80,9 +80,7 @@ class SnakemakeRunner:
     def prefix(cls, prefix):
         cls._process_prefix = prefix
 
-    def __init__(
-        self, container, data, jobname, advanced=False, partition="normal", account=None
-    ):
+    def __init__(self, container, data, jobname, partition="normal", account=None):
         self._container = container
         self._data = data
         self._jobname = re.sub("test_", "", jobname)
@@ -94,8 +92,7 @@ class SnakemakeRunner:
         self._external_jobid = []
         self._partition = partition
         self._account = account
-        d = "slurm-advanced" if advanced else "slurm"
-        self._profile = self._data.join(d).join("slurm")
+        self._profile = self._data.join("slurm")
 
     def exec_run(self, cmd, stream=False, **kwargs):
         return self._container.exec_run(cmd, stream=stream, **kwargs)
@@ -119,6 +116,7 @@ class SnakemakeRunner:
             + f"{options} --nolock "
             + f"-j {self._num_cores} {self.workdir} {force} {target} {prof} {jn}'"
         )
+
         try:
             (exit_code, output) = self.exec_run(cmd, stream=stream, detach=asynchronous)
         except Exception as e:
