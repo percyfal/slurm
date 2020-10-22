@@ -3,7 +3,11 @@ repos:
     rev: v3.2.0
     hooks:
       - id: check-merge-conflict
-  #    - id: debug-statements
+      - id: debug-statements
+        exclude: |
+          (?x)^(
+          \{\{cookecutter.profile_name\}\}/slurm-status.py
+          )
       - id: mixed-line-ending
       - id: check-case-conflict
       - id: check-added-large-files
