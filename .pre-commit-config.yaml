@@ -17,7 +17,6 @@ repos:
         language_version: python3
         args:
           - "{{cookiecutter.profile_name}}/slurm-submit.py"
-          - "{{cookiecutter.profile_name}}/slurm-status.py"
           - "{{cookiecutter.profile_name}}/slurm_utils.py"
           - tests/wrapper.py
           - tests/test_slurm.py
