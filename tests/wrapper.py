@@ -80,7 +80,9 @@ class SnakemakeRunner:
     def prefix(cls, prefix):
         cls._process_prefix = prefix
 
-    def __init__(self, container, data, jobname, advanced=False, partition="normal"):
+    def __init__(
+        self, container, data, jobname, advanced=False, partition="normal", account=None
+    ):
         self._container = container
         self._data = data
         self._jobname = re.sub("test_", "", jobname)
@@ -91,6 +93,7 @@ class SnakemakeRunner:
         self._logger = logging.getLogger(str(self))
         self._external_jobid = []
         self._partition = partition
+        self._account = account
         d = "slurm-advanced" if advanced else "slurm"
         self._profile = self._data.join(d).join("slurm")
 
@@ -148,6 +151,10 @@ class SnakemakeRunner:
     @property
     def snakemake(self):
         return self._snakemake
+
+    @property
+    def account(self):
+        return self._account
 
     @property
     def partition(self):
