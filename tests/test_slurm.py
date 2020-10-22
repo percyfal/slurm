@@ -1,40 +1,6 @@
 #!/usr/bin/env python3
 import pytest
-import signal
 import time
-from timeit import default_timer
-import logging
-
-
-class TimeOut(Exception):
-    pass
-
-
-def timeout_handler(signum, frame):
-    raise TimeOut
-
-
-class Timer:
-    def __init__(self, verbose=True, limit=90):
-        self.old_handler = signal.getsignal(signal.SIGALRM)
-        self.verbose = verbose
-        self.timer = default_timer
-        self.limit = limit
-
-    def elapsed_time(self):
-        return self.timer() - self.start
-
-    def __enter__(self):
-        self.start = self.timer()
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(self.limit)
-        return self
-
-    def __exit__(self, *args):
-        if self.verbose:
-            logging.info(f"Elapsed time: {int(self.elapsed_time())}s")
-        signal.signal(signal.SIGALRM, self.old_handler)
-        signal.alarm(0)
 
 
 @pytest.mark.slow
@@ -49,18 +15,24 @@ def test_no_timeout(smk_runner):
 def test_timeout(smk_runner):
     """Test that rule excessive runtime resources times out"""
     opts = (
-        f'--cluster "sbatch -p {smk_runner.partition} '
+        f'--cluster "sbatch --parsable -p {smk_runner.partition} {pytest.account} '
         '-c 1 -t {resources.runtime}" --attempt 1'
     )
-    with pytest.raises(TimeOut):
-        with Timer():
-            smk_runner.make_target("timeout.txt", options=opts, profile=None)
+    smk_runner.make_target("timeout.txt", options=opts, profile=None, asynchronous=True)
+    time.sleep(5)
+    # Need to discount queueing time
+    while smk_runner.check_jobstatus("RUNNING", verbose=False) is None:
+        time.sleep(5)
+    # Now wait for 1-minute job to complete
+    while smk_runner.check_jobstatus("RUNNING"):
+        time.sleep(30)
+
     assert smk_runner.check_jobstatus("TIMEOUT|NODE_FAIL")
 
 
 def test_profile_status_running(smk_runner):
     """Test that slurm-status.py catches RUNNING status"""
-    opts = f'--cluster "sbatch -p {smk_runner.partition} -c 1 -t 1"'
+    opts = f'--cluster "sbatch -p {smk_runner.partition} {pytest.account} -c 1 -t 1"'
     smk_runner.make_target(
         "timeout.txt", options=opts, profile=None, asynchronous=True
     )  # noqa: E501
@@ -88,7 +60,5 @@ def test_slurm_submit(smk_runner):
     )
     time.sleep(5)
     assert smk_runner.check_jobstatus(
-        "sm-job",
-        options="--format=jobname",
-        jobid=int(output.decode().strip()),  # noqa: E501
+        "sm-job", options="--format=jobname", jobid=int(output.decode().strip())
     )
