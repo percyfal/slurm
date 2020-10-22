@@ -9,7 +9,7 @@ from snakemake.utils import read_job_properties
 import slurm_utils
 
 # cookiecutter arguments
-SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}"""
+SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}{% if cookiecutter.cluster_name %} cluster={{cookiecutter.cluster_name}}{% endif %}"""
 CLUSTER_CONFIG = "{{cookiecutter.cluster_config}}"
 ADVANCED_ARGUMENT_CONVERSION = {"yes": True, "no": False}[
     "{{cookiecutter.advanced_argument_conversion}}"
