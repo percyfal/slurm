@@ -26,7 +26,7 @@ class ShellContainer(Model):
 
     def exec_run(self, cmd, stream=False, detach=False, **kwargs):
         stdout = kwargs.pop("stdout", sp.PIPE)
-        stderr = kwargs.pop("stderr", STDOUT)
+        stderr = kwargs.pop("stderr", sp.STDOUT)
         close_fds = sys.platform != "win32"
         executable = os.environ.get("SHELL", None)
         proc = sp.Popen(
@@ -48,7 +48,9 @@ class ShellContainer(Model):
 
         if stream:
             return ExecResult(None, iter_stdout(proc))
-        return ExecResult(proc.returncode, proc.stdout.read())
+
+        output = proc.communicate()
+        return ExecResult(proc.returncode, output[0])
 
 
 class SnakemakeRunner:
