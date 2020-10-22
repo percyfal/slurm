@@ -5,6 +5,8 @@ import re
 import math
 import argparse
 import subprocess
+import pandas as pd
+from io import StringIO
 
 from snakemake import io
 from snakemake.io import Wildcards
@@ -12,6 +14,7 @@ from snakemake.utils import SequenceFormatter
 from snakemake.utils import AlwaysQuotedFormatter
 from snakemake.utils import QuotedFormatter
 from snakemake.exceptions import WorkflowError
+from snakemake.logging import logger
 
 
 def parse_jobscript():
@@ -170,50 +173,96 @@ def submit_job(jobscript, **sbatch_options):
 
 def advanced_argument_conversion(arg_dict):
     """Experimental adjustment of sbatch arguments to the given or default partition."""
-    adjusted_args = {}
-
+    # Currently not adjusting for multiple node jobs
+    nodes = int(arg_dict.get("nodes", 1))
+    if nodes > 1:
+        return arg_dict
     partition = arg_dict.get("partition", None) or _get_default_partition()
     constraint = arg_dict.get("constraint", None)
     ncpus = int(arg_dict.get("cpus-per-task", 1))
-    nodes = int(arg_dict.get("nodes", 1))
-    mem = arg_dict.get("mem", None)
-    # Determine partition with features. If no constraints have been set,
-    # select the partition with lowest memory
-    try:
-        config = _get_cluster_configuration(partition)
-        mem_feat = _get_features_and_memory(partition)
-        MEMORY_PER_PARTITION = _get_available_memory(mem_feat, constraint)
-        MEMORY_PER_CPU = MEMORY_PER_PARTITION / int(config["cpus"])
-    except Exception as e:
-        print(e)
-        raise e
+    runtime = arg_dict.get("time", None)
 
-    # Adjust memory in the single-node case only; getting the
-    # functionality right for multi-node multi-cpu jobs requires more
-    # development
-    if "nodes" not in arg_dict or nodes == 1:
-        if mem:
-            adjusted_args["mem"] = min(int(mem), MEMORY_PER_PARTITION)
-            AVAILABLE_MEM = ncpus * MEMORY_PER_CPU
-            if adjusted_args["mem"] > AVAILABLE_MEM:
-                adjusted_args["cpus-per-task"] = int(
-                    math.ceil(int(mem) / MEMORY_PER_CPU)
-                )
-        adjusted_args["cpus-per-task"] = min(int(config["cpus"]), ncpus)
-    else:
-        if nodes == 1:
-            # Allocate at least as many tasks as requested nodes
-            adjusted_args["cpus-per-task"] = nodes
+    config = _get_cluster_configuration(partition, constraint, arg_dict.get("mem", 0))
+    mem = arg_dict.get("mem", ncpus * min(config["MEMORY_PER_CPU"]))
+
+    if mem > max(config["MEMORY"]):
+        logger.info(
+            f"provided memory ({mem}) > max memory ({max(config['MEMORY'])}); "
+            "adjusting memory settings"
+        )
+        mem = max(config["MEMORY"])
+
+    # Calculate available memory as defined by the number of requested
+    # cpus times memory per cpu
+    AVAILABLE_MEM = ncpus * min(config["MEMORY_PER_CPU"])
+    # Add additional cpus if memory is larger than AVAILABLE_MEM
+    if mem > AVAILABLE_MEM:
+        logger.info(
+            f"provided memory ({mem}) > "
+            f"ncpus x MEMORY_PER_CPU ({AVAILABLE_MEM}); "
+            "trying to adjust number of cpus up"
+        )
+        ncpus = int(math.ceil(mem / min(config["MEMORY_PER_CPU"])))
+    if ncpus > max(config["CPUS"]):
+        logger.info(
+            f"ncpus ({ncpus}) > available cpus ({max(config['CPUS'])}); "
+            "adjusting number of cpus down"
+        )
+        ncpus = min(int(max(config["CPUS"])), ncpus)
+    adjusted_args = {"mem": mem, "cpus-per-task": ncpus}
+
     # Update time. If requested time is larger than maximum allowed time, reset
-    try:
-        if "time" in arg_dict:
-            adjusted_args["time"] = min(int(config["time"]), int(arg_dict["time"]))
-    except Exception as e:
-        print(e)
-        raise e
+    if runtime:
+        runtime = time_to_minutes(runtime)
+        time_limit = max(config["TIMELIMIT_MINUTES"])
+        if runtime > time_limit:
+            logger.info(
+                f"time (runtime) > time limit {time_limit}; " "adjusting time down"
+            )
+            adjusted_args["time"] = time_limit
+
     # update and return
     arg_dict.update(adjusted_args)
     return arg_dict
+
+
+timeformats = [
+    re.compile(r"^(?P<days>\d+)-(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)$"),
+    re.compile(r"^(?P<days>\d+)-(?P<hours>\d+):(?P<minutes>\d+)$"),
+    re.compile(r"^(?P<days>\d+)-(?P<hours>\d+)$"),
+    re.compile(r"^(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)$"),
+    re.compile(r"^(?P<minutes>\d+):(?P<seconds>\d+)$"),
+    re.compile(r"^(?P<minutes>\d+)$"),
+]
+
+
+def time_to_minutes(time):
+    """Convert time string to minutes.
+
+    According to slurm:
+
+      Acceptable time formats include "minutes", "minutes:seconds",
+      "hours:minutes:seconds", "days-hours", "days-hours:minutes"
+      and "days-hours:minutes:seconds".
+
+    """
+    if not isinstance(time, str):
+        time = str(time)
+    d = {"days": 0, "hours": 0, "minutes": 0, "seconds": 0}
+    regex = list(filter(lambda regex: regex.match(time) is not None, timeformats))
+    if len(regex) == 0:
+        return
+    assert len(regex) == 1, "multiple time formats match"
+    m = regex[0].match(time)
+    d.update(m.groupdict())
+    minutes = (
+        int(d["days"]) * 24 * 60
+        + int(d["hours"]) * 60
+        + int(d["minutes"])
+        + math.ceil(int(d["seconds"]) / 60)
+    )
+    assert minutes > 0, "minutes has to be greater than 0"
+    return minutes
 
 
 def _get_default_partition():
@@ -224,71 +273,35 @@ def _get_default_partition():
     return partition
 
 
-def _get_cluster_configuration(partition):
-    """Retrieve cluster configuration for a partition."""
-    # Retrieve partition info; we tacitly assume we only get one response
-    cmd = " ".join(
-        [
-            'sinfo -e -O "partition,cpus,memory,time,size,maxcpuspernode"',
-            "-h -p {}".format(partition),
-        ]
-    )
-    res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
-    m = re.search(
-        (
-            r"(?P<partition>\S+)\s+(?P<cpus>\d+)"
-            r"\s+(?P<memory>\S+)\s+((?P<days>\d+)-)"
-            r"?(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)"
-            r"\s+(?P<size>\S+)\s+(?P<maxcpus>\S+)"
-        ),
-        res.stdout.decode(),
-    )
-    d = m.groupdict()
-    if "days" not in d or not d["days"]:
-        d["days"] = 0
-    d["time"] = (
-        int(d["days"]) * 24 * 60
-        + int(d["hours"]) * 60
-        + int(d["minutes"])
-        + math.ceil(int(d["seconds"]) / 60)
-    )
-    return d
+def _get_cluster_configuration(partition, constraints=None, memory=0):
+    """Retrieve cluster configuration.
 
-
-def _get_features_and_memory(partition):
-    """Retrieve features and memory for a partition in the cluster
-    configuration."""
-    cmd = " ".join(['sinfo -e -O "memory,features_act"', "-h -p {}".format(partition)])
-    res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)
-    mem_feat = []
-    for x in res.stdout.decode().split("\n"):
-        if not re.search(r"^\d+", x):
-            continue
-        m = re.search(r"^(?P<mem>\d+)\s+(?P<feat>\S+)", x)
-        mem_feat.append(
-            {"mem": m.groupdict()["mem"], "features": m.groupdict()["feat"].split(",")}
-        )
-    return mem_feat
-
-
-def _get_available_memory(mem_feat, constraints=None):
-    """Get available memory
-
-    If constraints are given, parse constraint string into array of
-    constraints and compare them to active features. Currently only
-    handles comma-separated strings and not the more advanced
-    constructs described in the slurm manual.
-
-    Else, the minimum memory for a given partition is returned.
+    Retrieve cluster configuration for a partition filtered by
+    constraints, memory and cpus
 
     """
-    if constraints is None:
-        return min([int(x["mem"]) for x in mem_feat])
-    try:
+    if constraints:
         constraint_set = set(constraints.split(","))
-        for x in mem_feat:
-            if constraint_set.intersection(x["features"]) == constraint_set:
-                return int(x["mem"])
+    cmd = ["sinfo", "-e", "-o", "%all", "-p", partition]
+    try:
+        proc = subprocess.Popen(" ".join(cmd), shell=True, stdout=subprocess.PIPE)
+        output = proc.communicate()
     except Exception as e:
         print(e)
         raise
+    data = re.sub(" \\|", "|", output[0].decode())
+    df = pd.read_csv(StringIO(data), sep="|")
+    try:
+        df["TIMELIMIT_MINUTES"] = df["TIMELIMIT"].apply(time_to_minutes)
+        df["MEMORY_PER_CPU"] = df["MEMORY"] / df["CPUS"]
+        df["FEATURE_SET"] = df["AVAIL_FEATURES"].str.split(",").apply(set)
+    except Exception as e:
+        print(e)
+        raise
+    memory = min(memory, max(df["MEMORY"]))
+    df = df.loc[df["MEMORY"] >= memory]
+    if constraints:
+        constraint_set = set(constraints.split(","))
+        i = df["FEATURE_SET"].apply(lambda x: len(x.intersection(constraint_set)) > 0)
+        df = df.loc[i]
+    return df
