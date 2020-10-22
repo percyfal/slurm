@@ -14,7 +14,7 @@ def test_adjust_runtime(smk_runner, profile):
     smk_runner.make_target(
         "timeout.txt", options=f"--cluster-config {smk_runner.cluster_config}"
     )
-    m = smk_runner.check_jobstatus("(?P<timelimit>\\d+)", "-o TimeLimitRaw -n", which=1)
+    m = smk_runner.check_jobstatus(r"(?P<timelimit>\d+)", "-o TimeLimitRaw -n", which=1)
     assert int(m.group("timelimit")) == 2
 
 
@@ -24,7 +24,7 @@ def test_adjust_memory(smk_runner, profile):
     smk_runner.make_target(
         "memory.txt", options=f"--cluster-config {smk_runner.cluster_config}"
     )
-    m = smk_runner.check_jobstatus("(?P<mem>\\d+)", "-o ReqMem -n")
+    m = smk_runner.check_jobstatus(r"(?P<mem>\d+)", "-o ReqMem -n")
     assert int(m.group("mem")) == 500
 
 
@@ -35,7 +35,7 @@ def test_memory_with_constraint(smk_runner, profile):
         "memory_with_constraint.txt",
         options=f"--cluster-config {smk_runner.cluster_config}",
     )
-    m = smk_runner.check_jobstatus("(?P<mem>\\d+)", "-o ReqMem -n")
+    m = smk_runner.check_jobstatus(r"(?P<mem>\d+)", "-o ReqMem -n")
     assert int(m.group("mem")) == 800
 
 
