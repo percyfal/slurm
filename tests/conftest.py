@@ -23,6 +23,7 @@ def pytest_addoption(parser):
     group.addoption(
         "--slow", action="store_true", help="include slow tests", default=False
     )
+    group.addoption("--cluster", action="store", default=None, help="slurm cluster")
 
 
 def pytest_configure(config):
@@ -36,6 +37,7 @@ def pytest_configure(config):
     pytest.account = ""
     if config.getoption("--account"):
         pytest.account = "--account={}".format(config.getoption("--account"))
+    pytest.cluster = config.getoption("--cluster")
 
 
 def setup_logging(level):
@@ -52,15 +54,30 @@ def setup_logging(level):
 
 @pytest.fixture
 def datadir(tmpdir_factory):
+    """Setup base data directory for a test"""
     p = tmpdir_factory.mktemp("data")
     return p
 
 
 @pytest.fixture
 def datafile(datadir):
-    def _datafile(src, dst=None, basedir=pytest.dname):
+    """Add a datafile to the datadir.
+
+    By default, look for a source (src) input file located in the
+    tests directory (pytest.dname). Custom data can be added by
+    pointing a file 'dname / src'. The contents of src are copied to
+    the file 'dst' in the test data directory
+
+    Args:
+      src (str): source file name
+      dst (str): destination file name. Defaults to src.
+      dname (str): directory where src is located.
+
+    """
+
+    def _datafile(src, dst=None, dname=pytest.dname):
         dst = src if dst is None else dst
-        src = py.path.local(pjoin(basedir, src))
+        src = py.path.local(pjoin(dname, src))
         dst = datadir.join(dst)
         src.copy(dst)
         return dst
@@ -70,6 +87,19 @@ def datafile(datadir):
 
 @pytest.fixture
 def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
+    """Cookie factory fixture.
+
+    Cookie factory fixture to create a slurm profile in the test data
+    directory.
+
+    Args:
+      sbatch_defaults (str): sbatch defaults for cookie
+      advanced (str): use advanced argument conversion ("no" or "yes")
+      cluster_name (str): set cluster name
+      cluster_config (str): cluster configuration file
+
+    """
+
     logging.getLogger("cookiecutter").setLevel(logging.INFO)
     _sbatch_defaults = (
         f"--partition={pytest.partition} {pytest.account} "
@@ -98,6 +128,7 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
 
 @pytest.fixture
 def data(tmpdir_factory, request, datafile):
+    """Setup base data consisting of a Snakefile and cluster configuration file"""
     datafile("Snakefile")
     ccfile = datafile("cluster-config.yaml")
     return py.path.local(ccfile.dirname)
@@ -105,6 +136,16 @@ def data(tmpdir_factory, request, datafile):
 
 @pytest.fixture(scope="session")
 def slurm(request):
+    """Slurm fixture
+
+    Return relevant container depending on environment. First look for
+    sbatch command to determine whether we are on a system running the
+    SLURM scheduler. Second, try deploying a docker stack to run slurm
+    locally.
+
+    Skip slurm tests if the above actions fail.
+
+    """
     if shutil.which("sbatch") is not None:
         return ShellContainer()
     else:
@@ -130,7 +171,15 @@ def slurm(request):
 
 
 def teardown(request):
-    """Shutdown snakemake processes that are waiting for slurm"""
+    """Shutdown snakemake processes that are waiting for slurm
+
+    On nsf systems, stale snakemake log files may linger in the test
+    directory, which prevents reruns of pytest. The teardown function
+    calls 'lsof' to identify and terminate the processes using these
+    files.
+
+    """
+
     logging.info(f"\n\nTearing down test '{request.node.name}'")
     basetemp = request.config.getoption("basetemp")
     from subprocess import Popen, PIPE
@@ -156,21 +205,35 @@ def teardown(request):
 
 @pytest.fixture
 def smk_runner(slurm, datadir, request):
+    """smk_runner fixture
+
+    Setup a wrapper.SnakemakeRunner instance that runs the snakemake
+    tests. Skip tests where the partition doesn't exist on the system.
+    Some tests also only run in docker.
+
+    """
+
     _, partitions = slurm.exec_run('sinfo -h -o "%P"', stream=False)
     plist = [p.strip("*") for p in partitions.decode().split("\n") if p != ""]
     markers = [m.name for m in request.node.iter_markers()]
     slow = request.config.getoption("--slow")
 
     if pytest.partition not in plist:
+        plist = ",".join(plist)
         pytest.skip(
-            "partition '{}' not in cluster partitions '{}'".format(
-                pytest.partition, ",".join(plist)
+            (
+                f"partition '{pytest.partition}' not in cluster partitions '{plist}';"
+                " use the --partition option"
             )
         )
 
     if isinstance(slurm, ShellContainer):
         if "docker" in markers:
             pytest.skip(f"'{request.node.name}' only runs in docker container")
+        if pytest.account == "":
+            pytest.skip(
+                "HPC slurm tests require setting the account; use the --account option"
+            )
 
     if not slow and "slow" in markers:
         pytest.skip(f"'{request.node.name}' is a slow test; activate with --slow flag")
