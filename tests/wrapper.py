@@ -217,18 +217,18 @@ class SnakemakeRunner:
 
         return self._external_jobid
 
-    def check_jobstatus(self, regex, options="", jobid=None, which=0):
+    def check_jobstatus(self, regex, options="", jobid=None, which=0, verbose=True):
         """Use sacct to check jobstatus"""
-        if self.external_jobid is None and jobid is None:
+        if len(self.external_jobid) == 0 and jobid is None:
             return False
         if jobid is None:
-            jobid = self.external_jobid[which]
-        cmd = f"sacct -P -b {options} -j {jobid}"
+            jobid = self.external_jobid[which].strip()
+        cmd = f"sacct --parsable2 -b {options} -j {jobid}"
         (exit_code, output) = self.exec_run(cmd, stream=False)
         if exit_code != 0:
             raise DockerException(output.decode())
         m = re.search(regex, output.decode())
-        if m is None:
+        if m is None and verbose:
             self._logger.warning(f"{cmd}\n{output.decode()}")
         return m
 
