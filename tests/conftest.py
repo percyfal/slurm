@@ -27,9 +27,10 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     pytest.local_user_id = os.getuid()
-    dname = os.path.dirname(__file__)
-    pytest.cookie_template = py.path.local(dname).join(os.pardir)
+    pytest.dname = os.path.dirname(__file__)
+    pytest.cookie_template = py.path.local(pytest.dname).join(os.pardir)
     config.addinivalue_line("markers", "slow: mark tests as slow")
+    config.addinivalue_line("markers", "docker: mark tests as docker tests only")
     setup_logging(config.getoption("--log-level"))
     pytest.partition = config.getoption("--partition")
     pytest.account = ""
@@ -50,39 +51,46 @@ def setup_logging(level):
 
 
 @pytest.fixture
-def data(tmpdir_factory, _cookiecutter_config_file):
+def datadir(tmpdir_factory):
     p = tmpdir_factory.mktemp("data")
-    dname = os.path.dirname(__file__)
-    # Snakefile for test
-    SNAKEFILE = py.path.local(pjoin(dname, "Snakefile"))
-    snakefile = p.join("Snakefile")
-    SNAKEFILE.copy(snakefile)
-    # Cluster configuration
-    CLUSTERCONFIG = py.path.local(pjoin(dname, "cluster-config.yaml"))
-    cluster_config = p.join("cluster-config.yaml")
-    CLUSTERCONFIG.copy(cluster_config)
+    return p
 
-    # Install cookie in data directory for each test
-    cookie_template = pjoin(os.path.abspath(dname), os.pardir)
-    output_factory = tmpdir_factory.mktemp
-    defaults = (
+
+@pytest.fixture
+def datafile(datadir):
+    def _datafile(fn):
+        src = py.path.local(pjoin(pytest.dname, fn))
+        dst = datadir.join(fn)
+        src.copy(dst)
+        return dst
+
+    return _datafile
+
+
+@pytest.fixture
+def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
+    logging.getLogger("cookiecutter").setLevel(logging.INFO)
+    _defaults = (
         f"--partition={pytest.partition} {pytest.account} "
         "--output=logs/slurm-%j.out --error=logs/slurm-%j.err"
     )
-    logging.getLogger("cookiecutter").setLevel(logging.INFO)
-    c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
-    c._new_output_dir = lambda: str(p.join("slurm"))
-    c.bake(extra_context={"sbatch_defaults": defaults})
-    # Advanced setting
-    c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
-    c._new_output_dir = lambda: str(p.join("slurm-advanced"))
-    c.bake(
-        extra_context={
-            "sbatch_defaults": defaults,
-            "advanced_argument_conversion": "yes",
-        }
-    )
-    return p
+
+    def _cookie_factory(defaults=_defaults):
+        cookie_template = pjoin(os.path.abspath(pytest.dname), os.pardir)
+        output_factory = tmpdir_factory.mktemp
+        c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
+        c._new_output_dir = lambda: str(datadir.join("slurm"))
+        c.bake(extra_context={"sbatch_defaults": defaults})
+
+    return _cookie_factory
+
+
+@pytest.fixture
+def data(tmpdir_factory, request, datafile, cookie_factory):
+    datafile("Snakefile")
+    ccfile = datafile("cluster-config.yaml")
+    cookie_factory()
+    return py.path.local(ccfile.dirname)
 
 
 @pytest.fixture(scope="session")
@@ -141,6 +149,8 @@ def smk_runner(slurm, data, request):
     advanced = re.search("advanced", basename(request.fspath)) is not None
     _, partitions = slurm.exec_run('sinfo -h -o "%P"', stream=False)
     plist = [p.strip("*") for p in partitions.decode().split("\n") if p != ""]
+    markers = [m.name for m in request.node.iter_markers()]
+    slow = request.config.getoption("--slow")
 
     if pytest.partition not in plist:
         pytest.skip(
@@ -148,6 +158,13 @@ def smk_runner(slurm, data, request):
                 pytest.partition, ",".join(plist)
             )
         )
+
+    if isinstance(slurm, ShellContainer):
+        if "docker" in markers:
+            pytest.skip(f"'{request.node.name}' only runs in docker container")
+
+    if not slow and "slow" in markers:
+        pytest.skip(f"'{request.node.name}' is a slow test; activate with --slow flag")
 
     yield SnakemakeRunner(slurm, data, request.node.name, advanced, pytest.partition)
 
