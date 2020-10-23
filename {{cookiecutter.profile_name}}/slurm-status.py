@@ -12,11 +12,11 @@ STATUS_ATTEMPTS = 20
 
 jobid = sys.argv[1]
 
-{% if cookiecutter.cluster_name %}
- cluster = "--cluster={{cookiecutter.cluster_name}}"
-{% else %}
+{% if cookiecutter.cluster_name %}  # noqa: E999,E225
+cluster = "--cluster={{cookiecutter.cluster_name}}"
+{% else %}  # noqa: E225
 cluster = ""
-{% endif %}
+{% endif %}  # noqa: E225
 
 for i in range(STATUS_ATTEMPTS):
     try:
@@ -36,7 +36,7 @@ for i in range(STATUS_ATTEMPTS):
         sctrl_res = sp.check_output(
             shlex.split(f"scontrol {cluster} -o show job {jobid}")
         )
-        m = re.search("JobState=(\w+)", sctrl_res.decode())
+        m = re.search(r"JobState=(\w+)", sctrl_res.decode())
         res = {jobid: m.group(1)}
         break
     except sp.CalledProcessError as e:
