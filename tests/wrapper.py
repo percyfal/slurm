@@ -220,7 +220,7 @@ class SnakemakeRunner:
         if len(self.external_jobid) == 0 and jobid is None:
             return False
         if jobid is None:
-            jobid = self.external_jobid[which].strip()
+            jobid = str(self.external_jobid[which]).strip()
         cmd = f"sacct --parsable2 -b {options} -j {jobid}"
         (exit_code, output) = self.exec_run(cmd, stream=False)
         if exit_code != 0:
