@@ -101,6 +101,7 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
       advanced (str): use advanced argument conversion ("no" or "yes")
       cluster_name (str): set cluster name
       cluster_config (str): cluster configuration file
+      yamlconfig (dict): dictionary of snakemake options with values
 
     """
 
@@ -109,12 +110,16 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
         f"--partition={pytest.partition} {pytest.account} "
         "--output=logs/slurm-%j.out --error=logs/slurm-%j.err"
     )
+    _yamlconfig_default = {
+        'restart-times': 1
+    }
 
     def _cookie_factory(
         sbatch_defaults=_sbatch_defaults,
         advanced="no",
         cluster_name=None,
         cluster_config=None,
+        yamlconfig=_yamlconfig_default
     ):
         cookie_template = pjoin(os.path.abspath(pytest.dname), os.pardir)
         output_factory = tmpdir_factory.mktemp
@@ -129,7 +134,12 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
         if cluster_config is not None:
             extra_context["cluster_config"] = cluster_config
         c.bake(extra_context=extra_context)
-
+        config = datadir.join("slurm").join("config.yaml")
+        config_d = dict(
+            [tuple(line.split(":")) for line in config.read().split("\n") if line != ""]
+        )
+        config_d.update(**yamlconfig)
+        config.write("\n".join(f"{k}: {v}" for k, v in config_d.items()))
     return _cookie_factory
 
 
