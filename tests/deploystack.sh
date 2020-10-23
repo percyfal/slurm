@@ -134,3 +134,7 @@ fi
 
 # Rewrite slurm config
 modify_slurm_conf $CONTAINER
+
+# Add pandas to snakemake
+CONTAINER=$(docker ps | grep cookiecutter-slurm_snakemake | awk '{print $1}')
+docker exec $CONTAINER pip install pandas
