@@ -232,34 +232,54 @@ The `__default__` entry will apply to all jobs.
 ## Tests
 
 Tests can be run on a HPC running SLURM or locally in a
-docker stack. The docker stack will be automatically deployed provided
-that the user has installed docker and enabled [docker
-swarm](https://docs.docker.com/engine/swarm/) (`docker swarm init`).
-Running the docker-based tests will deploy a docker stack
+docker stack. To execute tests, run
+
+	pytest -v -s tests
+
+from the source code root directory. Test options can be configured
+via the pytest configuration file `tests/pytest.ini`.
+
+Test dependencies are listed in `test-environment.yml` and can be
+installed in e.g. a conda environment.
+
+### Testing on a HPC running SLURM
+
+Test fixtures are setup in [temporary directories created by
+pytest](https://docs.pytest.org/en/stable/tmpdir.html). Usually
+fixtures end up in /tmp/pytest-of-user or something similar. In any
+case, these directories are usually not accessible on the nodes where
+the tests are run. Therefore, when running tests on a HPC running
+SLURM, by default tests fixtures will be written to the directory
+`.pytest` relative to the current working directory (which should be
+the source code root!). You can change the location with the `pytest`
+option `--basetemp`.
+
+
+### Testing on machine without SLURM
+
+For local testing the test suite will deploy a docker stack
 `cookiecutter-slurm` that runs two services based on the following
 images:
 
 1. [quay.io/biocontainers/snakemake](https://quay.io/repository/biocontainers/snakemake?tab=tags)
 2. [giovtorres/docker-centos7-slurm](https://github.com/giovtorres/docker-centos7-slurm)
 
-The docker stack can be deployed from the top-level directory as
-follows:
+The docker stack will be automatically deployed provided that the user
+has installed docker and enabled [docker
+swarm](https://docs.docker.com/engine/swarm/) (`docker swarm init`).
+The docker stack can also be deployed manually from the top-level
+directory as follows:
 
 	DOCKER_COMPOSE=tests/docker-compose.yaml ./tests/deploystack.sh
 
 See the deployment script `tests/deploystack.sh` for details.
 
+### Baking cookies
+
 Testing of the cookiecutter template is enabled through the
 [pytest plugin for
 Cookiecutters](https://github.com/hackebrot/pytest-cookies).
 
-You can run the tests by issuing
-
-	pytest -v -s tests
-
-in the profile source code root directory. By default, tests fixtures
-will be written to the directory `.pytest`. Test options can be
-configured via the pytest configuration file `tests/pytest.ini`.
 
 ### Anatomy of the tests (WIP)
 
