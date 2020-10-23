@@ -2,8 +2,8 @@
 
 # slurm
 
-This cookiecutter profile provides a template for configuring
-Snakemake to run on the [SLURM Workload
+This cookiecutter provides a template Snakemake profile for
+configuring Snakemake to run on the [SLURM Workload
 Manager](https://slurm.schedmd.com/). The profile defines three
 scripts
 
@@ -241,6 +241,11 @@ images:
 
 1. [quay.io/biocontainers/snakemake](https://quay.io/repository/biocontainers/snakemake?tab=tags)
 2. [giovtorres/docker-centos7-slurm](https://github.com/giovtorres/docker-centos7-slurm)
+
+The docker stack can be deployed from the top-level directory as
+follows:
+
+	DOCKER_COMPOSE=tests/docker-compose.yaml ./tests/deploystack.sh
 
 See the deployment script `tests/deploystack.sh` for details.
 
