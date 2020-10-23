@@ -6,7 +6,7 @@
 DOCKER_COMPOSE=${DOCKER_COMPOSE:=docker-compose.yaml}
 
 # Images
-SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake-minimal:5.26.1--py_1}
+SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake:5.26.1--1}
 SLURM_IMAGE=${SLURM_IMAGE:=giovtorres/docker-centos7-slurm:latest}
 
 if [ $CI ]; then
