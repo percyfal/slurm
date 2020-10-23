@@ -5,7 +5,7 @@ rule timeout:
     threads: lambda wildcards, attempt: attempt
     shell:
         """
-        for i in $(seq 1 110)
+        for i in $(seq 1 80)
         do
             echo $i >> {output}
             sleep 1
