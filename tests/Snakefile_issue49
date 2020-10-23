@@ -1,0 +1,16 @@
+# -*- snakemake -*-
+rule long_running_rule:
+    output:
+        "{sample}.delayOutput.txt",
+    resources:
+        time = 2
+    shell:
+        """
+        echo "" > {output}
+
+        for i in $(seq 1 60)
+        do
+            echo $i >> {output}
+            sleep 1
+        done
+        """
