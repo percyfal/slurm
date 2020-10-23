@@ -157,9 +157,8 @@ def submit_job(jobscript, **sbatch_options):
     """Submit jobscript and return jobid."""
     options = format_sbatch_options(**sbatch_options)
     try:
-        res = subprocess.check_output(
-            ["sbatch"] + ["--parsable"] + options + [jobscript]
-        )
+        cmd = ["sbatch"] + ["--parsable"] + options + [jobscript]
+        res = subprocess.check_output(cmd)
     except subprocess.CalledProcessError as e:
         raise e
     # Get jobid

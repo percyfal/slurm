@@ -13,7 +13,7 @@ STATUS_ATTEMPTS = 20
 jobid = sys.argv[1]
 
 {% if cookiecutter.cluster_name %}
-cluster = "--cluster={{cookiecutter.cluster_name}}"
+ cluster = "--cluster={{cookiecutter.cluster_name}}"
 {% else %}
 cluster = ""
 {% endif %}

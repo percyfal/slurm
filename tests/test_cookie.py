@@ -15,7 +15,6 @@ def test_cluster_name(cookies):
     sbatch_defaults = result.project.join("slurm-submit.py").read().split("\n")[11]
     assert '""""""' in sbatch_defaults
     cluster = result.project.join("slurm-status.py").read().split("\n")[15]
-    print(cluster)
     assert cluster == 'cluster = ""'
 
     result = cookies.bake(

@@ -39,7 +39,7 @@ def test_profile_status_running(smk_runner, profile):
     """Test that slurm-status.py catches RUNNING status"""
     opts = (
         f'--cluster "sbatch --parsable -p {smk_runner.partition}'
-        f'{pytest.account} -c 1 -t 1"'
+        f' {pytest.account} -c 1 -t 1"'
     )
     smk_runner.make_target(
         "timeout.txt", options=opts, profile=None, asynchronous=True
