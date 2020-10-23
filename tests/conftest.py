@@ -120,7 +120,10 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
         output_factory = tmpdir_factory.mktemp
         c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
         c._new_output_dir = lambda: str(datadir)
-        extra_context = {"sbatch_defaults": sbatch_defaults, "advanced": advanced}
+        extra_context = {
+            "sbatch_defaults": sbatch_defaults,
+            "advanced_argument_conversion": advanced
+        }
         if cluster_name is not None:
             extra_context["cluster_name"] = cluster_name
         if cluster_config is not None:
