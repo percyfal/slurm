@@ -40,7 +40,7 @@ def pytest_configure(config):
     if config.getoption("--account"):
         pytest.account = "--account={}".format(config.getoption("--account"))
     pytest.cluster = config.getoption("--cluster")
-    if shutil.which("sbatch") is None and config.getoption("--basetemp") is not None:
+    if shutil.which("sbatch") is not None and config.getoption("--basetemp") is None:
         config.option.basetemp = "./.pytest"
 
 
