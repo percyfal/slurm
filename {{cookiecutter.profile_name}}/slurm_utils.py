@@ -294,10 +294,10 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
     except Exception as e:
         print(e)
         raise
-    memory = min(memory, max(df["MEMORY"]))
-    df = df.loc[df["MEMORY"] >= memory]
     if constraints:
         constraint_set = set(constraints.split(","))
         i = df["FEATURE_SET"].apply(lambda x: len(x.intersection(constraint_set)) > 0)
         df = df.loc[i]
+    memory = min(memory, max(df["MEMORY"]))
+    df = df.loc[df["MEMORY"] >= memory]
     return df
