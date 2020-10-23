@@ -70,4 +70,4 @@ jobs:
 
       - name: run tests
         shell: bash -l {0}
-        run: pytest -v -s
+        run: pytest -v -s --slow tests/test_slurm.py tests/test_slurm_advanced.py tests/test_cookie.py tests/test_utils.py
