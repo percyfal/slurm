@@ -180,10 +180,8 @@ def advanced_argument_conversion(arg_dict):
     constraint = arg_dict.get("constraint", None)
     ncpus = int(arg_dict.get("cpus-per-task", 1))
     runtime = arg_dict.get("time", None)
-
     config = _get_cluster_configuration(partition, constraint, arg_dict.get("mem", 0))
     mem = arg_dict.get("mem", ncpus * min(config["MEMORY_PER_CPU"]))
-
     if mem > max(config["MEMORY"]):
         logger.info(
             f"provided memory ({mem}) > max memory ({max(config['MEMORY'])}); "
@@ -208,7 +206,7 @@ def advanced_argument_conversion(arg_dict):
             "adjusting number of cpus down"
         )
         ncpus = min(int(max(config["CPUS"])), ncpus)
-    adjusted_args = {"mem": mem, "cpus-per-task": ncpus}
+    adjusted_args = {"mem": int(mem), "cpus-per-task": ncpus}
 
     # Update time. If requested time is larger than maximum allowed time, reset
     if runtime:
