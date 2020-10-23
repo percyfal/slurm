@@ -4,7 +4,7 @@ from os.path import dirname
 import re
 import math
 import argparse
-import subprocess
+import subprocess as sp
 import pandas as pd
 from io import StringIO
 
@@ -158,8 +158,8 @@ def submit_job(jobscript, **sbatch_options):
     options = format_sbatch_options(**sbatch_options)
     try:
         cmd = ["sbatch"] + ["--parsable"] + options + [jobscript]
-        res = subprocess.check_output(cmd)
-    except subprocess.CalledProcessError as e:
+        res = sp.check_output(cmd)
+    except sp.CalledProcessError as e:
         raise e
     # Get jobid
     res = res.decode()
@@ -266,7 +266,7 @@ def time_to_minutes(time):
 
 def _get_default_partition():
     """Retrieve default partition for cluster"""
-    res = subprocess.check_output(["sinfo", "-O", "partition"])
+    res = sp.check_output(["sinfo", "-O", "partition"])
     m = re.search(r"(?P<partition>\S+)\*", res.decode(), re.M)
     partition = m.group("partition")
     return partition
@@ -283,8 +283,7 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
         constraint_set = set(constraints.split(","))
     cmd = ["sinfo", "-e", "-o", "%all", "-p", partition]
     try:
-        proc = subprocess.Popen(" ".join(cmd), shell=True, stdout=subprocess.PIPE)
-        output = proc.communicate()
+        output = sp.Popen(" ".join(cmd), shell=True, stdout=sp.PIPE).communicate()
     except Exception as e:
         print(e)
         raise

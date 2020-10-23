@@ -5,6 +5,7 @@ import re
 import py
 import pytest
 import docker
+from docker.models.containers import Container
 import shutil
 import logging
 from pytest_cookies.plugin import Cookies
@@ -32,6 +33,7 @@ def pytest_configure(config):
     pytest.cookie_template = py.path.local(pytest.dname).join(os.pardir)
     config.addinivalue_line("markers", "slow: mark tests as slow")
     config.addinivalue_line("markers", "docker: mark tests as docker tests only")
+    config.addinivalue_line("markers", "sbatch: mark tests as sbatch shell tests only")
     setup_logging(config.getoption("--log-level"))
     pytest.partition = config.getoption("--partition")
     pytest.account = ""
@@ -236,6 +238,10 @@ def smk_runner(slurm, datadir, request):
             pytest.skip(
                 "HPC slurm tests require setting the account; use the --account option"
             )
+
+    if isinstance(slurm, Container):
+        if "sbatch" in markers:
+            pytest.skip(f"'{request.node.name}' only runs with sbatch in shell")
 
     if not slow and "slow" in markers:
         pytest.skip(f"'{request.node.name}' is a slow test; activate with --slow flag")
