@@ -38,6 +38,8 @@ def pytest_configure(config):
     if config.getoption("--account"):
         pytest.account = "--account={}".format(config.getoption("--account"))
     pytest.cluster = config.getoption("--cluster")
+    if shutil.which("sbatch") is None and config.getoption("--basetemp") is not None:
+        config.option.basetemp = "./.pytest"
 
 
 def setup_logging(level):
