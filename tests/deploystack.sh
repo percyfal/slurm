@@ -138,3 +138,13 @@ modify_slurm_conf $CONTAINER
 # Add pandas to snakemake
 CONTAINER=$(docker ps | grep cookiecutter-slurm_snakemake | awk '{print $1}')
 docker exec $CONTAINER pip install pandas
+
+# Make sure sacct is function properly
+CONTAINER=$(docker ps | grep cookiecutter-slurm_slurm | awk '{print $1}')
+docker exec $CONTAINER sbatch -Q --wrap "sleep 1" --job-name check-sacct
+sleep 5
+docker exec $CONTAINER sacct -o JobName -p | grep check-sacct -q
+if [ $? -eq 1 ]; then
+    echo "sacct not working properly; tests will fail"
+    exit 1
+fi
