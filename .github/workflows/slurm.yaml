@@ -45,18 +45,8 @@ jobs:
       - name: docker swarm init
         run: docker swarm init
 
-      - if: steps.cache-images.outputs.cache-hit != 'true'
-        run: |
-          docker pull ${{ env.SNAKEMAKE_IMAGE }}
-          docker save -o ~/image-cache/snakemake.tar ${{ env.SNAKEMAKE_IMAGE }}
-
       - if: steps.cache-images.outputs.cache-hit == 'true'
         run: docker load -i ~/image-cache/snakemake.tar
-
-      - if: steps.cache-images.outputs.cache-hit != 'true'
-        run: |
-          docker pull ${{ env.SLURM_IMAGE }}
-          docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
 
       - if: steps.cache-images.outputs.cache-hit == 'true'
         run: docker load -i ~/image-cache/slurm.tar
@@ -69,6 +59,14 @@ jobs:
           SLURM_IMAGE: ${{ env.SLURM_IMAGE }}
         run: ./tests/deploystack.sh
 
+      - if: steps.cache-images.outputs.cache-hit != 'true'
+        run: docker save -o ~/image-cache/snakemake.tar ${{ env.SNAKEMAKE_IMAGE }}
+
+      - if: steps.cache-images.outputs.cache-hit != 'true'
+        run: docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
+
       - name: run tests
         shell: bash -l {0}
-        run: pytest -v -s tests/test_slurm.py tests/test_slurm_advanced.py tests/test_cookie.py tests/test_utils.py
+        run: |
+          conda env list
+          pytest -v -s tests/test_slurm.py tests/test_slurm_advanced.py tests/test_cookie.py tests/test_utils.py
