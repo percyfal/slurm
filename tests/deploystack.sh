@@ -138,10 +138,11 @@ docker exec $CONTAINER pip install pandas
 
 # Make sure sacct is function properly
 CONTAINER=$(docker ps | grep cookiecutter-slurm_slurm | awk '{print $1}')
-docker exec $CONTAINER sbatch -Q --wrap "sleep 1" --job-name check-sacct
+jobid=$(docker exec $CONTAINER sbatch --parsable --wrap "sleep 1" --job-name check-sacct)
 sleep 5
 docker exec $CONTAINER sacct -o JobName -p | grep check-sacct -q
 if [ $? -eq 1 ]; then
     echo "sacct not working properly; tests will fail"
     exit 1
 fi
+docker exec $CONTAINER scancel $jobid

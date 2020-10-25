@@ -9,6 +9,7 @@ def profile(cookie_factory, data):
 
 
 @pytest.mark.slow
+@pytest.mark.skipci
 def test_no_timeout(smk_runner, profile):
     """Test that rule that updates runtime doesn't timeout"""
     smk_runner.make_target("timeout.txt")
@@ -72,6 +73,7 @@ def test_slurm_submit(smk_runner, profile):
 
 
 @pytest.mark.timeout(60)
+@pytest.mark.skipci
 def test_group_job(smk_runner, profile):
     """Test that group job properties formatted as expected"""
     smk_runner.make_target("group_job.2.txt", stream=False)
