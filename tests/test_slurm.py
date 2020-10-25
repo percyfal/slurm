@@ -70,3 +70,16 @@ def test_slurm_submit(smk_runner, profile):
     assert smk_runner.check_jobstatus(
         "sm-job", options="--format=jobname", jobid=int(output.decode().strip())
     )
+
+
+def test_group_job(smk_runner, profile):
+    """Test that group job properties formatted as expected"""
+    smk_runner.make_target("group_job.2.txt")
+    assert "Submitted group job" in smk_runner.output
+    assert "2 of 2 steps" in smk_runner.output
+
+
+def test_wildcard_job(smk_runner, profile):
+    """Test that wildcard job properties formatted as expected"""
+    smk_runner.make_target("wildcard.wc.txt")
+    assert "Finished job" in smk_runner.output
