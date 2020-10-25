@@ -62,8 +62,7 @@ jobs:
       - if: steps.cache-images.outputs.cache-hit != 'true'
         run: docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
 
-      - name: Setup tmate session on manual dispatch
-        if: github.event_name == 'workflow_dispatch'
+      - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
 
       - name: run tests
@@ -73,7 +72,3 @@ jobs:
           pytest -v -s tests/test_utils.py
           # pytest -v -s tests/test_slurm.py
           # pytest -v -s tests/test_slurm_advanced.py
-
-      - name: tmate session if tests fail
-        if: failure() && github.event_name == 'workflow_dispatch'
-        uses: mxschmitt/action-tmate@v3
