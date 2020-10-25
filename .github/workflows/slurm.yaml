@@ -62,9 +62,6 @@ jobs:
       - if: steps.cache-images.outputs.cache-hit != 'true'
         run: docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: run tests
         shell: bash -l {0}
         run: |
@@ -72,3 +69,7 @@ jobs:
           pytest -v -s tests/test_utils.py
           pytest -v -s tests/test_slurm.py --slow
           pytest -v -s tests/test_slurm_advanced.py --slow
+
+      - name: Setup tmate session
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
