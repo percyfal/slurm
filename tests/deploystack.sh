@@ -9,8 +9,8 @@ DOCKER_COMPOSE=${DOCKER_COMPOSE:=docker-compose.yaml}
 SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake:5.26.1--1}
 SLURM_IMAGE=${SLURM_IMAGE:=giovtorres/docker-centos7-slurm:latest}
 
-docker pull -q $SNAKEMAKE_IMAGE
-docker pull -q $SLURM_IMAGE
+docker pull $SNAKEMAKE_IMAGE
+docker pull $SLURM_IMAGE
 
 # Stack and service config
 STACK_NAME=cookiecutter-slurm
