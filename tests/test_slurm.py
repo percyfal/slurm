@@ -83,6 +83,7 @@ def test_group_job(smk_runner, profile):
 
 
 @pytest.mark.timeout(60)
+@pytest.mark.skipci
 def test_wildcard_job(smk_runner, profile):
     """Test that wildcard job properties formatted as expected"""
     smk_runner.make_target("wildcard.wc.txt")
