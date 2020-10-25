@@ -8,6 +8,7 @@ def profile(cookie_factory, data):
     cookie_factory(advanced="yes")
 
 
+@pytest.mark.skipci
 @pytest.mark.slow
 @pytest.mark.docker
 def test_adjust_runtime(smk_runner, profile):
@@ -18,7 +19,6 @@ def test_adjust_runtime(smk_runner, profile):
     assert int(m.group("timelimit")) == 2
 
 
-@pytest.mark.slow
 @pytest.mark.docker
 def test_adjust_memory(smk_runner, profile):
     smk_runner.make_target(
@@ -28,7 +28,6 @@ def test_adjust_memory(smk_runner, profile):
     assert int(m.group("mem")) == 500
 
 
-@pytest.mark.slow
 @pytest.mark.docker
 def test_memory_with_constraint(smk_runner, profile):
     smk_runner.make_target(
