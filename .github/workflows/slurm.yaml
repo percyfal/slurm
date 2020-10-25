@@ -13,8 +13,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - run: mkdir -p ~/image-cache
       - name: cache-conda
         uses: actions/cache@v2
@@ -40,7 +38,6 @@ jobs:
           channel-priority: true
           environment-file: test-environment.yml
           use-only-tar-bz2: true
-          activate-environment: slurm-test
 
       - name: docker swarm init
         run: docker swarm init
@@ -50,6 +47,9 @@ jobs:
 
       - if: steps.cache-images.outputs.cache-hit == 'true'
         run: docker load -i ~/image-cache/slurm.tar
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
 
       - name: docker deploy
         shell: bash -l {0}

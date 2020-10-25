@@ -68,6 +68,7 @@ function modify_slurm_conf {
 	docker exec $container /bin/bash -c "sed -i -e \"s/^GresTypes/# GresTypes/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^NodeName/# NodeName/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^PartitionName/# PartitionName/g\" $slurmconf ;"
+	sleep 5
 	echo "  setting up slurm partitions..."
         docker exec $container /bin/bash -c "echo \"$SLURM_CONF\" >> $slurmconf ; "
 	# Restart services; needed for sacct; see https://github.com/giovtorres/docker-centos7-slurm/issues/3
