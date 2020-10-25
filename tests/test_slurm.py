@@ -8,7 +8,6 @@ def profile(cookie_factory, data):
     cookie_factory()
 
 
-@pytest.mark.skipci
 @pytest.mark.slow
 def test_no_timeout(smk_runner, profile):
     """Test that rule that updates runtime doesn't timeout"""
@@ -50,6 +49,7 @@ def test_profile_status_running(smk_runner, profile):
     smk_runner.cancel_slurm_job(jid)
 
 
+@pytest.mark.timeout(60)
 def test_slurm_submit(smk_runner, profile):
     """Test that slurm-submit.py works"""
     jobscript = smk_runner.script("jobscript.sh")
@@ -71,6 +71,7 @@ def test_slurm_submit(smk_runner, profile):
     smk_runner.cancel_slurm_job(jobid)
 
 
+@pytest.mark.timeout(60)
 def test_group_job(smk_runner, profile):
     """Test that group job properties formatted as expected"""
     smk_runner.make_target("group_job.2.txt", stream=False)
@@ -79,6 +80,7 @@ def test_group_job(smk_runner, profile):
     assert "2 of 2 steps" in smk_runner.output
 
 
+@pytest.mark.timeout(60)
 def test_wildcard_job(smk_runner, profile):
     """Test that wildcard job properties formatted as expected"""
     smk_runner.make_target("wildcard.wc.txt")
