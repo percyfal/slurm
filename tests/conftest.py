@@ -34,6 +34,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark tests as slow")
     config.addinivalue_line("markers", "docker: mark tests as docker tests only")
     config.addinivalue_line("markers", "sbatch: mark tests as sbatch shell tests only")
+    config.addinivalue_line("markers", "skipci: skip tests on ci")
     setup_logging(config.getoption("--log-level"))
     pytest.partition = config.getoption("--partition")
     pytest.account = ""
@@ -255,6 +256,9 @@ def smk_runner(slurm, datadir, request):
 
     if not slow and "slow" in markers:
         pytest.skip(f"'{request.node.name}' is a slow test; activate with --slow flag")
+
+    if os.getenv("CI") is not None and "skipci" in markers:
+        pytest.skip(f"skip '{request.node.name}' on CI; test fails on CI only")
 
     yield SnakemakeRunner(slurm, datadir, request.node.name, pytest.partition)
 
