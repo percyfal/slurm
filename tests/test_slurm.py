@@ -14,6 +14,7 @@ def test_no_timeout(smk_runner, profile):
     """Test that rule that updates runtime doesn't timeout"""
     smk_runner.make_target("timeout.txt")
     assert "Trying to restart" in smk_runner.output
+    smk_runner.wait_for_status("COMPLETED")
     assert "Finished job" in smk_runner.output
 
 
@@ -25,14 +26,9 @@ def test_timeout(smk_runner, profile):
         '-c 1 -t {resources.runtime}" --attempt 1'
     )
     smk_runner.make_target("timeout.txt", options=opts, profile=None, asynchronous=True)
-    time.sleep(5)
-    # Need to discount queueing time
-    while smk_runner.check_jobstatus("RUNNING", verbose=False) is None:
-        time.sleep(5)
-    # Now wait for 1-minute job to complete
-    while smk_runner.check_jobstatus("RUNNING"):
-        time.sleep(30)
-
+    # Discount queueing time
+    smk_runner.wait_for_status("RUNNING")
+    smk_runner.wait_while_status("RUNNING", tdelta=20, timeout=90)
     assert smk_runner.check_jobstatus("TIMEOUT|NODE_FAIL")
 
 
@@ -45,12 +41,13 @@ def test_profile_status_running(smk_runner, profile):
     smk_runner.make_target(
         "timeout.txt", options=opts, profile=None, asynchronous=True
     )  # noqa: E501
-    time.sleep(5)
+    smk_runner.wait_for_status("RUNNING", tdelta=5)
     jid = smk_runner.external_jobid[0]
     _, output = smk_runner.exec_run(
         cmd=f"{smk_runner.slurm_status} {jid}", stream=False
     )
     assert output.decode().strip() == "running"
+    smk_runner.cancel_slurm_job(jid)
 
 
 def test_slurm_submit(smk_runner, profile):
@@ -67,16 +64,17 @@ def test_slurm_submit(smk_runner, profile):
     _, output = smk_runner.exec_run(
         cmd=f"{smk_runner.slurm_submit} {jobscript}", stream=False
     )
+    jobid = int(output.decode().strip())
     time.sleep(5)
     assert smk_runner.check_jobstatus(
-        "sm-job", options="--format=jobname", jobid=int(output.decode().strip())
-    )
+        "sm-job", options="--format=jobname", jobid=jobid)
+    smk_runner.cancel_slurm_job(jobid)
 
 
-@pytest.mark.skipci
 def test_group_job(smk_runner, profile):
     """Test that group job properties formatted as expected"""
-    smk_runner.make_target("group_job.2.txt")
+    smk_runner.make_target("group_job.2.txt", stream=False)
+    smk_runner.wait_for_status("COMPLETED", tdelta=5)
     assert "Submitted group job" in smk_runner.output
     assert "2 of 2 steps" in smk_runner.output
 

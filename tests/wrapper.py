@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import logging
+import time
 import subprocess as sp
 from docker.models.resource import Model
 from docker.models.containers import ExecResult
@@ -214,6 +215,30 @@ class SnakemakeRunner:
                     print(e)
 
         return self._external_jobid
+
+    def wait_while_status(self, status, timeout=60, tdelta=10, verbose=False):
+        """Wait for status to change"""
+        t = 0
+        while self.check_jobstatus(status, verbose=verbose):
+            time.sleep(tdelta)
+            t = t + tdelta
+            if t >= timeout:
+                self._logger.error(f"waiting while status '{status}' timed out")
+                break
+
+    def wait_for_status(self, status, timeout=60, tdelta=10, verbose=False):
+        """Wait until status is achieved"""
+        t = 0
+        while not self.check_jobstatus(status, verbose=verbose):
+            time.sleep(tdelta)
+            t = t + tdelta
+            if t >= timeout:
+                self._logger.error(f"waiting for status '{status}' timed out")
+                break
+
+    def cancel_slurm_job(self, jobid):
+        """Cancel job in slurm queue"""
+        self.exec_run(f"scancel {jobid}")
 
     def check_jobstatus(self, regex, options="", jobid=None, which=0, verbose=True):
         """Use sacct to check jobstatus"""
