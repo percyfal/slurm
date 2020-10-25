@@ -189,7 +189,7 @@ def advanced_argument_conversion(arg_dict):
     mem = arg_dict.get("mem", ncpus * min(config["MEMORY_PER_CPU"]))
     if mem > max(config["MEMORY"]):
         logger.info(
-            f"provided memory ({mem}) > max memory ({max(config['MEMORY'])}); "
+            f"requested memory ({mem}) > max memory ({max(config['MEMORY'])}); "
             "adjusting memory settings"
         )
         mem = max(config["MEMORY"])
@@ -200,7 +200,7 @@ def advanced_argument_conversion(arg_dict):
     # Add additional cpus if memory is larger than AVAILABLE_MEM
     if mem > AVAILABLE_MEM:
         logger.info(
-            f"provided memory ({mem}) > "
+            f"requested memory ({mem}) > "
             f"ncpus x MEMORY_PER_CPU ({AVAILABLE_MEM}); "
             "trying to adjust number of cpus up"
         )
