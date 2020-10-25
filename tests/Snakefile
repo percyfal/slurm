@@ -1,15 +1,18 @@
 rule timeout:
     resources:
-        runtime = lambda wildcards, attempt: 2**(attempt - 1) * 1
+        runtime = lambda wildcards, attempt: attempt
     output: "timeout.txt"
     threads: lambda wildcards, attempt: attempt
+    log: "timeout.log"
     shell:
         """
+        touch {output}
         for i in $(seq 1 80)
         do
             echo $i >> {output}
             sleep 1
         done
+        tail {log}
         """
 
 
