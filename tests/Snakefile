@@ -6,13 +6,12 @@ rule timeout:
     log: "timeout.log"
     shell:
         """
-        touch {output}
         for i in $(seq 1 80)
         do
             echo $i >> {output}
             sleep 1
         done
-        tail {log}
+        exit 0
         """
 
 
