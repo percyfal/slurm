@@ -62,11 +62,10 @@ jobs:
       - if: steps.cache-images.outputs.cache-hit != 'true'
         run: docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: run tests
         shell: bash -l {0}
         run: |
-          conda env list
-          pytest -v -s tests/test_slurm.py tests/test_slurm_advanced.py tests/test_cookie.py tests/test_utils.py
+          pytest -v -s tests/test_cookie.py
+          pytest -v -s tests/test_utils.py
+          pytest -v -s tests/test_slurm.py --slow
+          pytest -v -s tests/test_slurm_advanced.py --slow
