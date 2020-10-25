@@ -13,8 +13,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - run: mkdir -p ~/image-cache
-
       - name: cache-conda
         uses: actions/cache@v2
         env:
