@@ -48,9 +48,6 @@ jobs:
       - if: steps.cache-images.outputs.cache-hit == 'true'
         run: docker load -i ~/image-cache/slurm.tar
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: docker deploy
         shell: bash -l {0}
         env:
@@ -64,6 +61,9 @@ jobs:
 
       - if: steps.cache-images.outputs.cache-hit != 'true'
         run: docker save -o ~/image-cache/slurm.tar ${{ env.SLURM_IMAGE }}
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
 
       - name: run tests
         shell: bash -l {0}
