@@ -175,17 +175,14 @@ def slurm(request):
         if container:
             return container
 
-    msg = [
-        (
-            "\n   no sbatch or docker stack 'cookiecutter-slurm' running;",
-            " skipping slurm-based tests",
-        ),
-        (
-            "   run tests on a slurm HPC or deploy a docker stack with ",
-            f"{os.path.dirname(__file__)}/deploystack.sh",
-        ),
-    ]
-    pytest.skip("\n".join(msg))
+    msg = (
+        "no sbatch or docker stack 'cookiecutter-slurm' running;"
+        " skipping slurm-based tests."
+        " Either run tests on a slurm HPC or deploy a docker stack with"
+        f" {os.path.dirname(__file__)}/deploystack.sh"
+    )
+
+    pytest.skip(msg)
 
 
 def teardown(request):

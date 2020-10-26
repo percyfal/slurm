@@ -9,12 +9,8 @@ DOCKER_COMPOSE=${DOCKER_COMPOSE:=docker-compose.yaml}
 SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake:5.26.1--1}
 SLURM_IMAGE=${SLURM_IMAGE:=giovtorres/docker-centos7-slurm:latest}
 
-if [ $CI ]; then
-    echo "Running CI; skipping docker pull"
-else
-    docker pull -q $SNAKEMAKE_IMAGE
-    docker pull -q $SLURM_IMAGE
-fi
+docker pull $SNAKEMAKE_IMAGE
+docker pull $SLURM_IMAGE
 
 # Stack and service config
 STACK_NAME=cookiecutter-slurm
@@ -68,6 +64,7 @@ function modify_slurm_conf {
 	docker exec $container /bin/bash -c "sed -i -e \"s/^GresTypes/# GresTypes/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^NodeName/# NodeName/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^PartitionName/# PartitionName/g\" $slurmconf ;"
+	sleep 5
 	echo "  setting up slurm partitions..."
         docker exec $container /bin/bash -c "echo \"$SLURM_CONF\" >> $slurmconf ; "
 	# Restart services; needed for sacct; see https://github.com/giovtorres/docker-centos7-slurm/issues/3
@@ -141,10 +138,11 @@ docker exec $CONTAINER pip install pandas
 
 # Make sure sacct is function properly
 CONTAINER=$(docker ps | grep cookiecutter-slurm_slurm | awk '{print $1}')
-docker exec $CONTAINER sbatch -Q --wrap "sleep 1" --job-name check-sacct
+jobid=$(docker exec $CONTAINER sbatch --parsable --wrap "sleep 1" --job-name check-sacct)
 sleep 5
 docker exec $CONTAINER sacct -o JobName -p | grep check-sacct -q
 if [ $? -eq 1 ]; then
     echo "sacct not working properly; tests will fail"
     exit 1
 fi
+docker exec $CONTAINER scancel $jobid
