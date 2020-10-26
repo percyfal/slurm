@@ -87,11 +87,16 @@ def format_wildcards(string, job_properties):
         job._format_params = Wildcards(fromdict=job_properties["params"])
     else:
         job._format_params = None
-    job._format_wildcards = Wildcards(fromdict=job_properties["wildcards"])
+    if "wildcards" in job_properties:
+        job._format_wildcards = Wildcards(fromdict=job_properties["wildcards"])
+    else:
+        job._format_wildcards = None
     _variables = dict()
     _variables.update(
-        dict(params=job._format_params, wildcards=job._format_wildcards, rule=job.rule)
+        dict(params=job._format_params, wildcards=job._format_wildcards)
     )
+    if hasattr(job, "rule"):
+        _variables.update(dict(rule=job.rule))
     try:
         return format(string, **_variables)
     except NameError as ex:
@@ -184,7 +189,7 @@ def advanced_argument_conversion(arg_dict):
     mem = arg_dict.get("mem", ncpus * min(config["MEMORY_PER_CPU"]))
     if mem > max(config["MEMORY"]):
         logger.info(
-            f"provided memory ({mem}) > max memory ({max(config['MEMORY'])}); "
+            f"requested memory ({mem}) > max memory ({max(config['MEMORY'])}); "
             "adjusting memory settings"
         )
         mem = max(config["MEMORY"])
@@ -195,7 +200,7 @@ def advanced_argument_conversion(arg_dict):
     # Add additional cpus if memory is larger than AVAILABLE_MEM
     if mem > AVAILABLE_MEM:
         logger.info(
-            f"provided memory ({mem}) > "
+            f"requested memory ({mem}) > "
             f"ncpus x MEMORY_PER_CPU ({AVAILABLE_MEM}); "
             "trying to adjust number of cpus up"
         )

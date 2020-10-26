@@ -48,3 +48,25 @@ rule memory_with_constraint:
 rule short_queue:
     output: "short_queue.txt"
     shell: "touch {output}"
+
+
+rule group_job1:
+    output: "group_job.1.txt"
+    group: "groupjob"
+    shell: "echo group_job1 > {output}"
+
+
+rule group_job2:
+    input: "{wc}.1.txt"
+    output: "{wc}.2.txt"
+    group: "groupjob"
+    shell: "cat {input} > {output}; echo group_job2 >> {output}"
+
+
+rule wildcard_job:
+    output: "{prefix}.wc.txt"
+    params:
+        label = "wcj_params"
+    wildcard_constraints:
+        prefix = "wildcard"
+    shell: "echo {wildcards.prefix} > {output}"
