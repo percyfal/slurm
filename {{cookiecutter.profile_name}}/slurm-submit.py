@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Snakemake SLURM submit script.
 """
@@ -9,15 +9,17 @@ from snakemake.utils import read_job_properties
 import slurm_utils
 
 # cookiecutter arguments
-SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}"""
+SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}{% if cookiecutter.cluster_name %} cluster={{cookiecutter.cluster_name}}{% endif %}"""
 CLUSTER_CONFIG = "{{cookiecutter.cluster_config}}"
-ADVANCED_ARGUMENT_CONVERSION = {"yes": True, "no": False}["{{cookiecutter.advanced_argument_conversion}}"]
+ADVANCED_ARGUMENT_CONVERSION = {"yes": True, "no": False}[
+    "{{cookiecutter.advanced_argument_conversion}}"
+]
 
 RESOURCE_MAPPING = {
     "time": ("time", "runtime", "walltime"),
     "mem": ("mem", "mem_mb", "ram", "memory"),
     "mem-per-cpu": ("mem-per-cpu", "mem_per_cpu", "mem_per_thread"),
-    "nodes": ("nodes", "nnodes")
+    "nodes": ("nodes", "nnodes"),
 }
 
 # parse job
@@ -48,7 +50,7 @@ sbatch_options.update(job_properties.get("cluster", {}))
 if ADVANCED_ARGUMENT_CONVERSION:
     sbatch_options = slurm_utils.advanced_argument_conversion(sbatch_options)
 
-#7) Format pattern in snakemake style
+# 7) Format pattern in snakemake style
 sbatch_options = slurm_utils.format_values(sbatch_options, job_properties)
 
 # ensure sbatch output dirs exist

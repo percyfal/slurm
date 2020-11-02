@@ -12,9 +12,15 @@ STATUS_ATTEMPTS = 20
 
 jobid = sys.argv[1]
 
+{% if cookiecutter.cluster_name %}  # noqa: E999,E225
+cluster = "--cluster={{cookiecutter.cluster_name}}"
+{% else %}  # noqa: E225
+cluster = ""
+{% endif %}  # noqa: E225
+
 for i in range(STATUS_ATTEMPTS):
     try:
-        sacct_res = sp.check_output(shlex.split("sacct -P -b -j {} -n".format(jobid)))
+        sacct_res = sp.check_output(shlex.split(f"sacct {cluster} -P -b -j {jobid} -n"))
         res = {
             x.split("|")[0]: x.split("|")[1]
             for x in sacct_res.decode().strip().split("\n")
@@ -28,9 +34,9 @@ for i in range(STATUS_ATTEMPTS):
     # Try getting job with scontrol instead in case sacct is misconfigured
     try:
         sctrl_res = sp.check_output(
-            shlex.split("scontrol -o show job {}".format(jobid))
+            shlex.split(f"scontrol {cluster} -o show job {jobid}")
         )
-        m = re.search("JobState=(\w+)", sctrl_res.decode())
+        m = re.search(r"JobState=(\w+)", sctrl_res.decode())
         res = {jobid: m.group(1)}
         break
     except sp.CalledProcessError as e:

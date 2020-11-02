@@ -1,179 +1,266 @@
 #!/usr/bin/env python3
 import os
+from os.path import join as pjoin
 import re
-import sys
 import py
 import pytest
 import docker
-import shlex
-import subprocess as sp
-import time
+from docker.models.containers import Container
+import shutil
 import logging
 from pytest_cookies.plugin import Cookies
-from wrapper import SlurmRunner, SnakemakeRunner
-
-# TODO: put in function so level can be set via command line
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("urllib3").setLevel(logging.INFO)
-logging.getLogger("docker").setLevel(logging.INFO)
-logging.getLogger("poyo").setLevel(logging.INFO)
-logging.getLogger("binaryornot").setLevel(logging.INFO)
-logging.getLogger("cookiecutter").setLevel(logging.INFO)
-logger = logging.getLogger("cookiecutter-slurm")
-
-ROOT_DIR = py.path.local(os.path.dirname(__file__)).join(os.pardir)
-DOCKER_STACK_NAME = "cookiecutter-slurm"
-SLURM_SERVICE = DOCKER_STACK_NAME + "_slurm"
-LOCAL_USER_ID = os.getuid()
+from wrapper import SnakemakeRunner, ShellContainer
 
 
-# Snakefile for test
-SNAKEFILE = py.path.local(os.path.join(os.path.dirname(__file__), "Snakefile"))
-# Cluster configuration
-CLUSTERCONFIG = py.path.local(
-    os.path.join(os.path.dirname(__file__), "cluster-config.yaml")
-)
-
-# Check services
-client = docker.from_env()
-service_list = client.services.list(filters={"name": "cookiecutter-slurm_slurm"})
-service_up = pytest.mark.skipif(
-    len(service_list) == 0,
-    reason="docker service cookiecutter-slurm is down; deploy docker-compose.yaml",
-)
+def pytest_addoption(parser):
+    group = parser.getgroup("slurm")
+    group.addoption(
+        "--partition",
+        action="store",
+        default="normal",
+        help="partition to run tests on",
+    )
+    group.addoption("--account", action="store", default=None, help="slurm account")
+    group.addoption(
+        "--slow", action="store_true", help="include slow tests", default=False
+    )
+    group.addoption("--cluster", action="store", default=None, help="slurm cluster")
 
 
 def pytest_configure(config):
-    pytest.local_user_id = LOCAL_USER_ID
-    pytest.template = ROOT_DIR
+    pytest.local_user_id = os.getuid()
+    pytest.dname = os.path.dirname(__file__)
+    pytest.cookie_template = py.path.local(pytest.dname).join(os.pardir)
     config.addinivalue_line("markers", "slow: mark tests as slow")
+    config.addinivalue_line("markers", "docker: mark tests as docker tests only")
+    config.addinivalue_line("markers", "sbatch: mark tests as sbatch shell tests only")
+    config.addinivalue_line("markers", "skipci: skip tests on ci")
+    setup_logging(config.getoption("--log-level"))
+    pytest.partition = config.getoption("--partition")
+    pytest.account = ""
+    if config.getoption("--account"):
+        pytest.account = "--account={}".format(config.getoption("--account"))
+    pytest.cluster = config.getoption("--cluster")
+    if shutil.which("sbatch") is not None and config.getoption("--basetemp") is None:
+        config.option.basetemp = "./.pytest"
 
 
-def add_slurm_user(user, container):
-    logger.info(f"Adding user {user} to {container}")
-    try:
-        cmd_args = [
-            "/bin/bash -c '",
-            "if",
-            "id",
-            str(user),
-            ">/dev/null;",
-            "then",
-            'echo "User {} exists";'.format(user),
-            "else",
-            "useradd --shell /bin/bash ",
-            '-u {} -o -c "" -m -g slurm user;'.format(user),
-            "fi'",
-        ]
-        cmd = " ".join(cmd_args)
-        container.exec_run(cmd, detach=False, stream=False, user="root")
-    except:
-        logger.warn(f"Failed to add user {user} to {container}")
-        raise
+def setup_logging(level):
+    if level is None:
+        level = logging.WARN
+    elif re.match(r"\d+", level):
+        level = int(level)
+    logging.basicConfig(level=level)
+    logging.getLogger("urllib3").setLevel(level)
+    logging.getLogger("docker").setLevel(level)
+    logging.getLogger("poyo").setLevel(level)
+    logging.getLogger("binaryornot").setLevel(level)
 
 
-def link_python(container):
-    (_, output) = container.exec_run(
-        "which python{}.{}".format(sys.version_info.major, sys.version_info.minor)
-    )
-    cmd = "ln -s {} /usr/bin/python{}".format(output.decode(), sys.version_info.major)
-    container.exec_run(cmd, detach=False, stream=False, user="root")
-
-
-SLURM_CONF = """
-# NEW COMPUTE NODE DEFINITIONS
-NodeName=DEFAULT Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 State=UNKNOWN TmpDisk=10000
-NodeName=c[1-2] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB
-NodeName=c[3-4] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=800 Feature=fat,mem800MB
-NodeName=c[5] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB
-# NEW PARTITIONS
-PartitionName=normal Default=YES Nodes=c[1-4] Shared=NO MaxNodes=1 MaxTime=5-00:00:00 DefaultTime=5-00:00:00 State=UP DefMemPerCPU=500 OverSubscribe=NO
-PartitionName=debug  Nodes=c[5] Shared=NO MaxNodes=1 MaxTime=05:00:00 DefaultTime=05:00:00 State=UP DefMemPerCPU=500
-"""
-
-
-def setup_sacctmgr(container):
-    slurmconf = "/etc/slurm/slurm.conf"
-    (exit_code, output) = container.exec_run(
-        f'grep -c "NEW PARTITIONS" {slurmconf}',
-        user="root",
-        detach=False,
-        stream=False,
-    )
-    cmd_args = [
-        "/bin/bash -c 'sacctmgr --immediate add cluster name=linux;",
-        f'sed -i -e "s/CR_CPU_Memory/CR_Core/g" {slurmconf} ;',
-        f'sed -i -e "s/^NodeName/# NodeName/g" {slurmconf} ;',
-        f'sed -i -e "s/^PartitionName/# PartitionName/g" {slurmconf} ;',
-        f'echo "{SLURM_CONF}" >> {slurmconf} ; ',
-        "service supervisor stop;",
-        "service supervisor start;",
-        "supervisorctl restart slurmdbd;",
-        "supervisorctl restart slurmctld;",
-        'sacctmgr --immediate add account none,test Cluster=linux Description="none" Organization="none"\'',
-    ]
-    cmd = " ".join(cmd_args)
-    if int(output.decode().strip()) == 0:
-        logger.info("Setting up slurm partitions...")
-        (exit_code, output) = container.exec_run(
-            cmd, detach=False, stream=True, user="root"
-        )
-        logger.info("...setting up slurm partitions done!")
-    if exit_code:
-        logger.critical("Failed to setup account")
-        sys.exit()
-
-
-@pytest.fixture(scope="session")
-def data(tmpdir_factory, _cookiecutter_config_file):
+@pytest.fixture
+def datadir(tmpdir_factory):
+    """Setup base data directory for a test"""
     p = tmpdir_factory.mktemp("data")
-    snakefile = p.join("Snakefile")
-    SNAKEFILE.copy(snakefile)
-    cluster_config = p.join("cluster-config.yaml")
-    CLUSTERCONFIG.copy(cluster_config)
-    template = os.path.join(os.path.abspath(os.path.dirname(__file__)), os.pardir)
-    output_factory = tmpdir_factory.mktemp
-    defaults = "partition=normal output=logs/slurm-%j.out error=logs/slurm-%j.err"
-    c = Cookies(template, output_factory, _cookiecutter_config_file)
-    c._new_output_dir = lambda: str(p.join("slurm"))
-    c.bake(extra_context={"sbatch_defaults": defaults})
-    # Advanced setting
-    c = Cookies(template, output_factory, _cookiecutter_config_file)
-    c._new_output_dir = lambda: str(p.join("slurm-advanced"))
-    c.bake(
-        extra_context={
-            "sbatch_defaults": defaults,
-            "advanced_argument_conversion": "yes",
-        }
-    )
     return p
 
 
-@pytest.fixture(scope="session")
-def cluster(data):
-    client = docker.from_env()
-    service_list = client.services.list(filters={"name": "cookiecutter-slurm_slurm"})
-    s = client.services.get(service_list[0].id)
-    container = client.containers.get(
-        s.tasks()[0]["Status"]["ContainerStatus"]["ContainerID"]
+@pytest.fixture
+def datafile(datadir):
+    """Add a datafile to the datadir.
+
+    By default, look for a source (src) input file located in the
+    tests directory (pytest.dname). Custom data can be added by
+    pointing a file 'dname / src'. The contents of src are copied to
+    the file 'dst' in the test data directory
+
+    Args:
+      src (str): source file name
+      dst (str): destination file name. Defaults to src.
+      dname (str): directory where src is located.
+
+    """
+
+    def _datafile(src, dst=None, dname=pytest.dname):
+        dst = src if dst is None else dst
+        src = py.path.local(pjoin(dname, src))
+        dst = datadir.join(dst)
+        src.copy(dst)
+        return dst
+
+    return _datafile
+
+
+@pytest.fixture
+def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
+    """Cookie factory fixture.
+
+    Cookie factory fixture to create a slurm profile in the test data
+    directory.
+
+    Args:
+      sbatch_defaults (str): sbatch defaults for cookie
+      advanced (str): use advanced argument conversion ("no" or "yes")
+      cluster_name (str): set cluster name
+      cluster_config (str): cluster configuration file
+      yamlconfig (dict): dictionary of snakemake options with values
+
+    """
+
+    logging.getLogger("cookiecutter").setLevel(logging.INFO)
+    _sbatch_defaults = (
+        f"--partition={pytest.partition} {pytest.account} "
+        "--output=logs/slurm-%j.out --error=logs/slurm-%j.err"
     )
-    add_slurm_user(pytest.local_user_id, container)
-    setup_sacctmgr(container)
-    link_python(container)
-    # Hack: modify first line in snakemake file
-    container.exec_run(["sed", "-i", "-e", "s:/usr:/opt:", "/opt/local/bin/snakemake"])
-    return container, data
+    _yamlconfig_default = {
+        'restart-times': 1
+    }
+
+    def _cookie_factory(
+        sbatch_defaults=_sbatch_defaults,
+        advanced="no",
+        cluster_name=None,
+        cluster_config=None,
+        yamlconfig=_yamlconfig_default
+    ):
+        cookie_template = pjoin(os.path.abspath(pytest.dname), os.pardir)
+        output_factory = tmpdir_factory.mktemp
+        c = Cookies(cookie_template, output_factory, _cookiecutter_config_file)
+        c._new_output_dir = lambda: str(datadir)
+        extra_context = {
+            "sbatch_defaults": sbatch_defaults,
+            "advanced_argument_conversion": advanced
+        }
+        if cluster_name is not None:
+            extra_context["cluster_name"] = cluster_name
+        if cluster_config is not None:
+            extra_context["cluster_config"] = cluster_config
+        c.bake(extra_context=extra_context)
+        config = datadir.join("slurm").join("config.yaml")
+        config_d = dict(
+            [tuple(line.split(":")) for line in config.read().split("\n") if line != ""]
+        )
+        config_d.update(**yamlconfig)
+        config.write("\n".join(f"{k}: {v}" for k, v in config_d.items()))
+    return _cookie_factory
 
 
-# NB: currently not used
 @pytest.fixture
-def slurm_runner(cluster, request):
-    container, data = cluster
-    return SlurmRunner(container, data, request.node.name)
+def data(tmpdir_factory, request, datafile):
+    """Setup base data consisting of a Snakefile and cluster configuration file"""
+    datafile("Snakefile")
+    ccfile = datafile("cluster-config.yaml")
+    return py.path.local(ccfile.dirname)
+
+
+@pytest.fixture(scope="session")
+def slurm(request):
+    """Slurm fixture
+
+    Return relevant container depending on environment. First look for
+    sbatch command to determine whether we are on a system running the
+    SLURM scheduler. Second, try deploying a docker stack to run slurm
+    locally.
+
+    Skip slurm tests if the above actions fail.
+
+    """
+    if shutil.which("sbatch") is not None:
+        return ShellContainer()
+    else:
+        client = docker.from_env()
+        container_list = client.containers.list(
+            filters={"name": "cookiecutter-slurm_slurm"}
+        )
+        container = container_list[0] if len(container_list) > 0 else None
+        if container:
+            return container
+
+    msg = (
+        "no sbatch or docker stack 'cookiecutter-slurm' running;"
+        " skipping slurm-based tests."
+        " Either run tests on a slurm HPC or deploy a docker stack with"
+        f" {os.path.dirname(__file__)}/deploystack.sh"
+    )
+
+    pytest.skip(msg)
+
+
+def teardown(request):
+    """Shutdown snakemake processes that are waiting for slurm
+
+    On nsf systems, stale snakemake log files may linger in the test
+    directory, which prevents reruns of pytest. The teardown function
+    calls 'lsof' to identify and terminate the processes using these
+    files.
+
+    """
+
+    logging.info(f"\n\nTearing down test '{request.node.name}'")
+    basetemp = request.config.getoption("basetemp")
+    from subprocess import Popen, PIPE
+    import psutil
+
+    for root, _, files in os.walk(basetemp, topdown=False):
+        for name in files:
+            if not root.endswith(".snakemake/log"):
+                continue
+            try:
+                fn = os.path.join(root, name)
+                proc = Popen(["lsof", "-F", "p", fn], stdout=PIPE, stderr=PIPE)
+                pid = proc.communicate()[0].decode().strip().strip("p")
+                if pid:
+                    p = psutil.Process(int(pid))
+                    logging.info(f"Killing process {p.pid} related to {fn}")
+                    p.kill()
+            except psutil.NoSuchProcess as e:
+                logging.warning(e)
+            except ValueError as e:
+                logging.warning(e)
 
 
 @pytest.fixture
-def smk_runner(cluster, request):
-    container, data = cluster
-    advanced = re.search("advanced", os.path.basename(request.fspath)) is not None
-    return SnakemakeRunner(container, data, request.node.name, advanced=advanced)
+def smk_runner(slurm, datadir, request):
+    """smk_runner fixture
+
+    Setup a wrapper.SnakemakeRunner instance that runs the snakemake
+    tests. Skip tests where the partition doesn't exist on the system.
+    Some tests also only run in docker.
+
+    """
+
+    _, partitions = slurm.exec_run('sinfo -h -o "%P"', stream=False)
+    plist = [p.strip("*") for p in partitions.decode().split("\n") if p != ""]
+    markers = [m.name for m in request.node.iter_markers()]
+    slow = request.config.getoption("--slow")
+
+    if pytest.partition not in plist:
+        plist = ",".join(plist)
+        pytest.skip(
+            (
+                f"partition '{pytest.partition}' not in cluster partitions '{plist}';"
+                " use the --partition option"
+            )
+        )
+
+    if isinstance(slurm, ShellContainer):
+        if "docker" in markers:
+            pytest.skip(f"'{request.node.name}' only runs in docker container")
+        if pytest.account == "":
+            pytest.skip(
+                "HPC slurm tests require setting the account; use the --account option"
+            )
+
+    if isinstance(slurm, Container):
+        if "sbatch" in markers:
+            pytest.skip(f"'{request.node.name}' only runs with sbatch in shell")
+
+    if not slow and "slow" in markers:
+        pytest.skip(f"'{request.node.name}' is a slow test; activate with --slow flag")
+
+    if os.getenv("CI") is not None and "skipci" in markers:
+        pytest.skip(f"skip '{request.node.name}' on CI; test fails on CI only")
+
+    yield SnakemakeRunner(slurm, datadir, request.node.name, pytest.partition)
+
+    if isinstance(slurm, ShellContainer):
+        teardown(request)

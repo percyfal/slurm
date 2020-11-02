@@ -1,5 +1,28 @@
 # ChangeLog
 
+## 2020-10-23
+
+This is a major rewrite of the testing framework, in an attempt to
+make it more accessible to users. In particular, it is now possible to
+run tests on an HPC.
+
+### Changes
+
+- the new ShellContainer class emulates container output and allows
+  the tests to be executed on a HPC running SLURM
+- slurm-submit.py now submits sbatch jobs with the --parsable option
+- add profile option 'cluster\_name' - some HPCs define multiple SLURM
+  clusters. Simply adding --cluster=cluster\_name to SBATCH_DEFAULTS
+  will not suffice as slurm-status.py also needs to check status in
+  the queue corresponding to the chosen cluster.
+- the advanced argument conversion has been much simplified and
+  improved
+
+### Issues
+
+- options without arguments can now be set in SBATCH_DEFAULTS (fixes #52)
+
+
 ## 2020-09-11
 
 Move CI infrastructure from circleCI to github actions.
