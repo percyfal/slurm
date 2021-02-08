@@ -1,6 +1,6 @@
 name: Test SnakemakeProfiles/slurm
 env:
-  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:5.26.1--1
+  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:5.32.0--0
   SLURM_IMAGE: giovtorres/docker-centos7-slurm:latest
   DOCKER_COMPOSE: tests/docker-compose.yaml
 
@@ -25,13 +25,13 @@ jobs:
       - uses: actions/cache@v2
         id: cache-images
         env:
-          CACHE_NUMBER: 1
+          CACHE_NUMBER: 0
         with:
           path: ~/image-cache
           key: image-cache-${{ runner.os }}-${{ env.CACHE_NUMBER }}-${{ env.SNAKEMAKE_IMAGE }}-${{ env.SLURM_IMAGE }}
 
       - name: install miniconda
-        uses: goanpeca/setup-miniconda@v1
+        uses: conda-incubator/setup-miniconda@v2
         with:
           mamba-version: "*"
           channels: conda-forge,bioconda,default

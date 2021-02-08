@@ -6,7 +6,7 @@
 DOCKER_COMPOSE=${DOCKER_COMPOSE:=docker-compose.yaml}
 
 # Images
-SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake:5.26.1--1}
+SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake:5.32.0--0}
 SLURM_IMAGE=${SLURM_IMAGE:=giovtorres/docker-centos7-slurm:latest}
 
 docker pull $SNAKEMAKE_IMAGE
@@ -64,16 +64,44 @@ function modify_slurm_conf {
 	docker exec $container /bin/bash -c "sed -i -e \"s/^GresTypes/# GresTypes/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^NodeName/# NodeName/g\" $slurmconf ;"
         docker exec $container /bin/bash -c "sed -i -e \"s/^PartitionName/# PartitionName/g\" $slurmconf ;"
-	sleep 5
+
 	echo "  setting up slurm partitions..."
         docker exec $container /bin/bash -c "echo \"$SLURM_CONF\" >> $slurmconf ; "
+	# Need to be sure slurmdb is available for sacctmgr to work
+	database_up $container
 	# Restart services; needed for sacct; see https://github.com/giovtorres/docker-centos7-slurm/issues/3
 	echo "  restarting slurm services..."
 	docker exec $container /bin/bash -c 'sacctmgr --immediate add cluster name=linux'
 	docker exec $container supervisorctl restart slurmdbd
 	docker exec $container supervisorctl restart slurmctld
         docker exec $container /bin/bash -c "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\""
+	docker exec $container sinfo
     fi
+}
+
+
+### Check if database is up
+function database_up {
+    COUNT=1
+    MAXCOUNT=10
+
+    container=$1
+    docker exec $container mysqladmin status 2> /dev/null
+    database_up=$?
+
+    until [ $database_up -eq 0 ]; do
+	echo "$COUNT: database unavailable"
+	sleep 5
+	docker exec $container mysqladmin status 2> /dev/null
+	database_up=$?
+	if [ $COUNT -eq $MAXCOUNT ]; then
+	    echo "database connection failed"
+	    return
+	fi
+	COUNT=$((COUNT+1))
+    done
+
+    echo "database up!"
 }
 
 
