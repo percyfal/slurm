@@ -63,22 +63,48 @@ function modify_slurm_conf {
     if [ $? -eq 1 ]; then
 	echo "Rewriting /etc/slurm/slurm.conf"
 	# Change consumable resources to Core, else threads configuration fails
-        docker exec $container /bin/bash -c "sed -i -e \"s/CR_CPU_Memory/CR_Core/g\" $slurmconf ;"
+	docker exec $container /bin/bash -c "sed -i -e \"s/CR_CPU_Memory/CR_Core/g\" $slurmconf ;"
 	# Comment out node names and partition names that are to be redefined
 	docker exec $container /bin/bash -c "sed -i -e \"s/^GresTypes/# GresTypes/g\" $slurmconf ;"
-        docker exec $container /bin/bash -c "sed -i -e \"s/^NodeName/# NodeName/g\" $slurmconf ;"
-        docker exec $container /bin/bash -c "sed -i -e \"s/^PartitionName/# PartitionName/g\" $slurmconf ;"
+	docker exec $container /bin/bash -c "sed -i -e \"s/^NodeName/# NodeName/g\" $slurmconf ;"
+	docker exec $container /bin/bash -c "sed -i -e \"s/^PartitionName/# PartitionName/g\" $slurmconf ;"
 	echo "  setting up slurm partitions..."
-        docker exec $container /bin/bash -c "echo \"$SLURM_CONF\" >> $slurmconf ; "
+	docker exec $container /bin/bash -c "echo \"$SLURM_CONF\" >> $slurmconf ; "
 	# Restart services; needed for sacct; see https://github.com/giovtorres/docker-centos7-slurm/issues/3
 	echo "  restarting slurm services..."
+	# Need to be sure slurmdb is available for sacctmgr to work
+	database_up $container
 	docker exec $container /bin/bash -c 'sacctmgr --immediate add cluster name=linux'
 	docker exec $container supervisorctl restart slurmdbd
 	docker exec $container supervisorctl restart slurmctld
-        docker exec $container /bin/bash -c "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\""
+	docker exec $container /bin/bash -c "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\""
     fi
 }
 
+
+### Check if database is up
+function database_up {
+    COUNT=1
+    MAXCOUNT=10
+
+    container=$1
+    docker exec $container mysqladmin status 2> /dev/null
+    database_up=$?
+
+    until [ $database_up -eq 0 ]; do
+	echo "$COUNT: database unavailable"
+	sleep 5
+	docker exec $container mysqladmin status 2> /dev/null
+	database_up=$?
+	if [ $COUNT -eq $MAXCOUNT ]; then
+	    echo "database connection failed"
+	    return
+	fi
+	COUNT=$((COUNT+1))
+    done
+
+    echo "database up!"
+}
 
 ### Check if service is up
 function service_up {
