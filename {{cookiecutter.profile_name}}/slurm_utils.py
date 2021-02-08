@@ -19,7 +19,7 @@ from snakemake.logging import logger
 
 def _convert_units_to_mb(memory):
     """If memory is specified with SI unit, convert to MB"""
-    if isinstance(memory, int):
+    if isinstance(memory, int) or isinstance(memory, float):
         return memory
     siunits = {"K": 1e-3, "M": 1, "G": 1e3, "T": 1e6}
     regex = re.compile(r"(\d+)({})$".format("|".join(siunits.keys())))
@@ -32,7 +32,7 @@ def _convert_units_to_mb(memory):
             )
         )
         sys.exit(1)
-    factor = int(siunits[m.group(2)])
+    factor = siunits[m.group(2)]
     return int(m.group(1)) * factor
 
 
