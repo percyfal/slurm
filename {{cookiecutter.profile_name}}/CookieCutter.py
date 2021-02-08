@@ -9,7 +9,7 @@ class CookieCutter:
         defaults = "{{cookiecutter.sbatch_defaults}}"
         cluster = CookieCutter.get_cluster_name()
         if cluster != "":
-            defaults = defaults + f" cluster={cluster}"
+            defaults = defaults + f" --cluster={cluster}"
         return defaults
 
     @staticmethod
