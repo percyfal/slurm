@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import os
+import sys
 from os.path import dirname
 import re
 import math
 import argparse
 import subprocess as sp
-import pandas as pd
 from io import StringIO
 
 from snakemake import io
@@ -282,6 +282,15 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
     constraints, memory and cpus
 
     """
+    try:
+        import pandas as pd
+    except ImportError:
+        print(
+            "Error: currently advanced argument conversion "
+            "depends on 'pandas'.", file=sys.stderr
+        )
+        sys.exit(1)
+
     if constraints:
         constraint_set = set(constraints.split(","))
     cmd = ["sinfo", "-e", "-o", "%all", "-p", partition]
