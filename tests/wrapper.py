@@ -63,7 +63,8 @@ class SnakemakeRunner:
     _jobid_regex = "|".join(
         [
             r"Submitted batch job (\d+)",
-            r"Submitted job \d+ with external jobid '(\d+)'."
+            r"Submitted job \d+ with external jobid '(\d+)'.",
+            r"Submitted group job \S+ with external jobid '(\d+)'."
             # Missing resubmitted case
         ]
     )
