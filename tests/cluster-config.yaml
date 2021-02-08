@@ -6,3 +6,6 @@ memory_with_constraint:
 
 short_queue:
   partition: debug
+
+simemory:
+  mem: 1G

@@ -51,3 +51,13 @@ def test_cluster_short_queue(smk_runner, profile):
         options=f"--cluster-config {smk_runner.cluster_config}",
     )
     assert smk_runner.check_jobstatus("debug", "-n -o Partition")
+
+
+def test_si_units(smk_runner, profile):
+    """Test that setting memory with si units works"""
+    _, output = smk_runner.make_target(
+        "siunit.txt",
+        options=f"--cluster-config {smk_runner.cluster_config}",
+        stream=False
+    )
+    assert "requested memory (1000)" in (smk_runner.output)

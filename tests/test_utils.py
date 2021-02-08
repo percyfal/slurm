@@ -71,3 +71,18 @@ def test_argument_conversion(request, mock_get_cluster_config,
 def test_default_partition(mock_get_default_partition):
     p = slurm_utils._get_default_partition()
     assert p == "normal"
+
+
+def test_si_units():
+    m = slurm_utils._convert_units_to_mb(1000)
+    assert m == 1000
+    m = slurm_utils._convert_units_to_mb("1000K")
+    assert m == 1
+    m = slurm_utils._convert_units_to_mb("1000M")
+    assert m == 1000
+    m = slurm_utils._convert_units_to_mb("1000G")
+    assert m == 1e6
+    m = slurm_utils._convert_units_to_mb("1000T")
+    assert m == 1e9
+    with pytest.raises(SystemExit):
+        m = slurm_utils._convert_units_to_mb("1000E")
