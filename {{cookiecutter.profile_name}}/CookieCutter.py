@@ -6,17 +6,19 @@ class CookieCutter:
 
     @staticmethod
     def get_sbatch_defaults() -> str:
-        defaults = "{{cookiecutter.sbatch_defaults}}"
-        cluster = CookieCutter.get_cluster_name()
-        if cluster != "":
-            defaults = defaults + f" --cluster={cluster}"
-        return defaults
+        return "{{cookiecutter.sbatch_defaults}}"
 
     @staticmethod
     def get_cluster_name() -> str:
         return "{{cookiecutter.cluster_name}}"
 
-    # To be deprecated in favor of local slurm.yaml file
+    @staticmethod
+    def get_cluster_option() -> str:
+        cluster = CookieCutter.get_cluster_name()
+        if cluster != "":
+            return f"--cluster={cluster}"
+        return ""
+
     @staticmethod
     def get_cluster_config() -> str:
         return "{{cookiecutter.cluster_config}}"

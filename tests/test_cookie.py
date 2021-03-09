@@ -11,13 +11,15 @@ def test_bake_project(cookies):
 
 
 def test_cluster_name(cookies):
-    result = cookies.bake(template=str(pytest.cookie_template))
+    def _get_cluster(result):
+        config = result.project.join("CookieCutter.py").read()
+        i = config.split("\n").index("    def get_cluster_name() -> str:") + 1
+        return config.split("\n")[i].strip()
 
-    cluster = result.project.join("CookieCutter.py").read().split("\n")[16]
-    assert cluster.strip() == 'return ""'
+    result = cookies.bake(template=str(pytest.cookie_template))
+    assert _get_cluster(result) == 'return ""'
 
     result = cookies.bake(
         template=str(pytest.cookie_template), extra_context={"cluster_name": "dusk"}
     )
-    cluster = result.project.join("CookieCutter.py").read().split("\n")[16]
-    assert cluster.strip() == 'return "dusk"'
+    assert _get_cluster(result) == 'return "dusk"'

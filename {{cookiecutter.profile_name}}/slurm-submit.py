@@ -9,6 +9,7 @@ from CookieCutter import CookieCutter
 
 # cookiecutter arguments
 SBATCH_DEFAULTS = CookieCutter.get_sbatch_defaults()
+CLUSTER = CookieCutter.get_cluster_option()
 CLUSTER_CONFIG = CookieCutter.get_cluster_config()
 ADVANCED_ARGUMENT_CONVERSION = CookieCutter.get_advanced_argument_conversion()
 
@@ -26,8 +27,9 @@ job_properties = read_job_properties(jobscript)
 sbatch_options = {}
 cluster_config = slurm_utils.load_cluster_config(CLUSTER_CONFIG)
 
-# 1) sbatch default arguments
+# 1) sbatch default arguments and cluster
 sbatch_options.update(slurm_utils.parse_sbatch_defaults(SBATCH_DEFAULTS))
+sbatch_options.update(slurm_utils.parse_sbatch_defaults(CLUSTER))
 
 # 2) cluster_config defaults
 sbatch_options.update(cluster_config["__default__"])

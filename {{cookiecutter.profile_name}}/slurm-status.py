@@ -5,6 +5,7 @@ import shlex
 import sys
 import time
 import logging
+from CookieCutter import CookieCutter
 
 logger = logging.getLogger("__name__")
 
@@ -12,11 +13,7 @@ STATUS_ATTEMPTS = 20
 
 jobid = sys.argv[1]
 
-{% if cookiecutter.cluster_name %}  # noqa: E999,E225
-cluster = "--cluster={{cookiecutter.cluster_name}}"
-{% else %}  # noqa: E225
-cluster = ""
-{% endif %}  # noqa: E225
+cluster = CookieCutter.get_cluster_option()
 
 for i in range(STATUS_ATTEMPTS):
     try:
@@ -30,6 +27,7 @@ for i in range(STATUS_ATTEMPTS):
         logger.error("sacct process error")
         logger.error(e)
     except IndexError as e:
+        logger.error(e)
         pass
     # Try getting job with scontrol instead in case sacct is misconfigured
     try:
