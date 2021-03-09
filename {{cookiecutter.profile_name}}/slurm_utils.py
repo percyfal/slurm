@@ -16,6 +16,8 @@ from snakemake.utils import QuotedFormatter
 from snakemake.exceptions import WorkflowError
 from snakemake.logging import logger
 
+from CookieCutter import CookieCutter
+
 
 def _convert_units_to_mb(memory):
     """If memory is specified with SI unit, convert to MB"""
@@ -292,7 +294,9 @@ def time_to_minutes(time):
 
 def _get_default_partition():
     """Retrieve default partition for cluster"""
-    res = sp.check_output(["sinfo", "-O", "partition"])
+    cluster = CookieCutter.get_cluster_option()
+    cmd = f"sinfo -O partition {cluster}"
+    res = sp.check_output(cmd.split())
     m = re.search(r"(?P<partition>\S+)\*", res.decode(), re.M)
     partition = m.group("partition")
     return partition
@@ -316,7 +320,8 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
 
     if constraints:
         constraint_set = set(constraints.split(","))
-    cmd = ["sinfo", "-e", "-o", "%all", "-p", partition]
+    cluster = CookieCutter.get_cluster_option()
+    cmd = f"sinfo -e -o %all -p {partition} {cluster}".split()
     try:
         output = sp.Popen(" ".join(cmd), shell=True, stdout=sp.PIPE).communicate()
     except Exception as e:
