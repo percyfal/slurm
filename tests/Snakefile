@@ -72,3 +72,8 @@ rule wildcard_job:
     wildcard_constraints:
         prefix = "wildcard"
     shell: "echo {wildcards.prefix} > {output}"
+
+
+rule simemory:
+    output: "siunit.txt"
+    shell: "touch {output}"

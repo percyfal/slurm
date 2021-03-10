@@ -9,11 +9,22 @@ from docker.models.containers import Container
 sys.path.append(
     os.path.join(os.path.dirname(__file__), os.pardir, "{{cookiecutter.profile_name}}")
 )
+from CookieCutter import CookieCutter  # noqa: E402
 import slurm_utils  # noqa: E402
 
 
+# Profile has not been installed so need to mock calls
 @pytest.fixture
-def mock_get_cluster_config(smk_runner, monkeypatch):
+def mock_cookiecutter_cluster_option(monkeypatch):
+    def cluster_option():
+        return ""
+    monkeypatch.setattr(CookieCutter, "get_cluster_option", cluster_option)
+
+
+@pytest.fixture
+def mock_get_cluster_config(smk_runner,
+                            mock_cookiecutter_cluster_option,
+                            monkeypatch):
     if isinstance(smk_runner._container, Container):
         class MockPopen:
             def __init__(self, cmd, **kwargs):
@@ -26,12 +37,13 @@ def mock_get_cluster_config(smk_runner, monkeypatch):
 
 
 @pytest.fixture
-def mock_get_default_partition(smk_runner, monkeypatch):
+def mock_get_default_partition(smk_runner,
+                               mock_cookiecutter_cluster_option,
+                               monkeypatch):
     if isinstance(smk_runner._container, Container):
         def mock_res(cmd, **kwargs):
             res = smk_runner.exec_run(cmd)
             return res.output
-
         monkeypatch.setattr(subprocess, "check_output", mock_res)
 
 
@@ -54,7 +66,8 @@ def test_cluster_configuration(request, mock_get_cluster_config):
     assert re.match(r"^\d+$", str(df["TIMELIMIT_MINUTES"][0]))
 
 
-def test_argument_conversion(request, mock_get_cluster_config,
+def test_argument_conversion(request,
+                             mock_get_cluster_config,
                              mock_get_default_partition):
     partition = request.config.getoption("--partition")
     config = slurm_utils._get_cluster_configuration(partition)
@@ -71,3 +84,18 @@ def test_argument_conversion(request, mock_get_cluster_config,
 def test_default_partition(mock_get_default_partition):
     p = slurm_utils._get_default_partition()
     assert p == "normal"
+
+
+def test_si_units():
+    m = slurm_utils._convert_units_to_mb(1000)
+    assert m == 1000
+    m = slurm_utils._convert_units_to_mb("1000K")
+    assert m == 1
+    m = slurm_utils._convert_units_to_mb("1000M")
+    assert m == 1000
+    m = slurm_utils._convert_units_to_mb("1000G")
+    assert m == 1e6
+    m = slurm_utils._convert_units_to_mb("1000T")
+    assert m == 1e9
+    with pytest.raises(SystemExit):
+        m = slurm_utils._convert_units_to_mb("1000E")

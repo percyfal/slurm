@@ -88,3 +88,14 @@ def test_wildcard_job(smk_runner, profile):
     """Test that wildcard job properties formatted as expected"""
     smk_runner.make_target("wildcard.wc.txt")
     assert "Finished job" in smk_runner.output
+
+
+def test_si_units(smk_runner, profile):
+    """Test that setting memory with si units works"""
+    _, output = smk_runner.make_target(
+        "siunit.txt",
+        options=f"--cluster-config {smk_runner.cluster_config}",
+        stream=False
+    )
+    assert "Memory specification can not be satisfied" in smk_runner.output
+    assert "--mem=1000" in smk_runner.output

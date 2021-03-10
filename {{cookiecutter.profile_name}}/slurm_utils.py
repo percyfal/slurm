@@ -16,6 +16,27 @@ from snakemake.utils import QuotedFormatter
 from snakemake.exceptions import WorkflowError
 from snakemake.logging import logger
 
+from CookieCutter import CookieCutter
+
+
+def _convert_units_to_mb(memory):
+    """If memory is specified with SI unit, convert to MB"""
+    if isinstance(memory, int) or isinstance(memory, float):
+        return int(memory)
+    siunits = {"K": 1e-3, "M": 1, "G": 1e3, "T": 1e6}
+    regex = re.compile(r"(\d+)({})$".format("|".join(siunits.keys())))
+    m = regex.match(memory)
+    if m is None:
+        logger.error(
+            (
+                f"unsupported memory specification '{memory}';"
+                "  allowed suffixes: [K|M|G|T]"
+            )
+        )
+        sys.exit(1)
+    factor = siunits[m.group(2)]
+    return int(int(m.group(1)) * factor)
+
 
 def parse_jobscript():
     """Minimal CLI to require/only accept single positional argument."""
@@ -113,6 +134,8 @@ def format_wildcards(string, job_properties):
 def format_values(dictionary, job_properties):
     formatted = dictionary.copy()
     for key, value in list(formatted.items()):
+        if key == "mem":
+            value = str(_convert_units_to_mb(value))
         if isinstance(value, str):
             try:
                 formatted[key] = format_wildcards(value, job_properties)
@@ -185,8 +208,10 @@ def advanced_argument_conversion(arg_dict):
     constraint = arg_dict.get("constraint", None)
     ncpus = int(arg_dict.get("cpus-per-task", 1))
     runtime = arg_dict.get("time", None)
-    config = _get_cluster_configuration(partition, constraint, arg_dict.get("mem", 0))
+    memory = _convert_units_to_mb(arg_dict.get("mem", 0))
+    config = _get_cluster_configuration(partition, constraint, memory)
     mem = arg_dict.get("mem", ncpus * min(config["MEMORY_PER_CPU"]))
+    mem = _convert_units_to_mb(mem)
     if mem > max(config["MEMORY"]):
         logger.info(
             f"requested memory ({mem}) > max memory ({max(config['MEMORY'])}); "
@@ -269,7 +294,9 @@ def time_to_minutes(time):
 
 def _get_default_partition():
     """Retrieve default partition for cluster"""
-    res = sp.check_output(["sinfo", "-O", "partition"])
+    cluster = CookieCutter.get_cluster_option()
+    cmd = f"sinfo -O partition {cluster}"
+    res = sp.check_output(cmd.split())
     m = re.search(r"(?P<partition>\S+)\*", res.decode(), re.M)
     partition = m.group("partition")
     return partition
@@ -293,7 +320,8 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
 
     if constraints:
         constraint_set = set(constraints.split(","))
-    cmd = ["sinfo", "-e", "-o", "%all", "-p", partition]
+    cluster = CookieCutter.get_cluster_option()
+    cmd = f"sinfo -e -o %all -p {partition} {cluster}".split()
     try:
         output = sp.Popen(" ".join(cmd), shell=True, stdout=sp.PIPE).communicate()
     except Exception as e:
@@ -312,6 +340,6 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
         constraint_set = set(constraints.split(","))
         i = df["FEATURE_SET"].apply(lambda x: len(x.intersection(constraint_set)) > 0)
         df = df.loc[i]
-    memory = min(memory, max(df["MEMORY"]))
+    memory = min(_convert_units_to_mb(memory), max(df["MEMORY"]))
     df = df.loc[df["MEMORY"] >= memory]
     return df

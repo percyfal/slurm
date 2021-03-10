@@ -2,18 +2,16 @@
 """
 Snakemake SLURM submit script.
 """
-import warnings  # use warnings.warn() rather than print() to output info in this script
-
 from snakemake.utils import read_job_properties
 
 import slurm_utils
+from CookieCutter import CookieCutter
 
 # cookiecutter arguments
-SBATCH_DEFAULTS = """{{cookiecutter.sbatch_defaults}}{% if cookiecutter.cluster_name %} cluster={{cookiecutter.cluster_name}}{% endif %}"""
-CLUSTER_CONFIG = "{{cookiecutter.cluster_config}}"
-ADVANCED_ARGUMENT_CONVERSION = {"yes": True, "no": False}[
-    "{{cookiecutter.advanced_argument_conversion}}"
-]
+SBATCH_DEFAULTS = CookieCutter.SBATCH_DEFAULTS
+CLUSTER = CookieCutter.get_cluster_option()
+CLUSTER_CONFIG = CookieCutter.CLUSTER_CONFIG
+ADVANCED_ARGUMENT_CONVERSION = CookieCutter.get_advanced_argument_conversion()
 
 RESOURCE_MAPPING = {
     "time": ("time", "runtime", "walltime"),
@@ -29,8 +27,9 @@ job_properties = read_job_properties(jobscript)
 sbatch_options = {}
 cluster_config = slurm_utils.load_cluster_config(CLUSTER_CONFIG)
 
-# 1) sbatch default arguments
+# 1) sbatch default arguments and cluster
 sbatch_options.update(slurm_utils.parse_sbatch_defaults(SBATCH_DEFAULTS))
+sbatch_options.update(slurm_utils.parse_sbatch_defaults(CLUSTER))
 
 # 2) cluster_config defaults
 sbatch_options.update(cluster_config["__default__"])
