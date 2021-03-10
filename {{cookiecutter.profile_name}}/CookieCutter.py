@@ -4,28 +4,21 @@
 
 class CookieCutter:
 
-    @staticmethod
-    def get_sbatch_defaults() -> str:
-        return "{{cookiecutter.sbatch_defaults}}"
-
-    @staticmethod
-    def get_cluster_name() -> str:
-        return "{{cookiecutter.cluster_name}}"
+    SBATCH_DEFAULTS = "{{cookiecutter.sbatch_defaults}}"
+    CLUSTER_NAME = "{{cookiecutter.cluster_name}}"
+    CLUSTER_CONFIG = "{{cookiecutter.cluster_config}}"
+    ADVANCED_ARGUMENT_CONVERSION = "{{cookiecutter.advanced_argument_conversion}}"
 
     @staticmethod
     def get_cluster_option() -> str:
-        cluster = CookieCutter.get_cluster_name()
+        cluster = CookieCutter.CLUSTER_NAME
         if cluster != "":
             return f"--cluster={cluster}"
         return ""
 
     @staticmethod
-    def get_cluster_config() -> str:
-        return "{{cookiecutter.cluster_config}}"
-
-    @staticmethod
     def get_advanced_argument_conversion() -> bool:
         val = {"yes": True, "no": False}[
-            "{{cookiecutter.advanced_argument_conversion}}"
+            CookieCutter.ADVANCED_ARGUMENT_CONVERSION
         ]
         return val

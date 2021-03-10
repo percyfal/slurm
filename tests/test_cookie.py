@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import pytest
 
 
@@ -10,16 +11,29 @@ def test_bake_project(cookies):
     assert result.project.isdir()
 
 
-def test_cluster_name(cookies):
-    def _get_cluster(result):
-        config = result.project.join("CookieCutter.py").read()
-        i = config.split("\n").index("    def get_cluster_name() -> str:") + 1
-        return config.split("\n")[i].strip()
-
+def test_cookiecutter(cookies, monkeypatch):
     result = cookies.bake(template=str(pytest.cookie_template))
-    assert _get_cluster(result) == 'return ""'
+    monkeypatch.syspath_prepend(str(result.project))
+    from CookieCutter import CookieCutter
+    assert CookieCutter.SBATCH_DEFAULTS == ""
+    assert CookieCutter.CLUSTER_NAME == ""
+    assert CookieCutter.CLUSTER_CONFIG == ""
+    assert CookieCutter.get_cluster_option() == ""
+    assert CookieCutter.get_advanced_argument_conversion() is False
+    sys.modules.pop("CookieCutter")
 
-    result = cookies.bake(
-        template=str(pytest.cookie_template), extra_context={"cluster_name": "dusk"}
-    )
-    assert _get_cluster(result) == 'return "dusk"'
+
+def test_cookiecutter_extra_context(cookies, monkeypatch):
+    result = cookies.bake(template=str(pytest.cookie_template),
+                          extra_context={"sbatch_defaults": "account=foo",
+                                         "cluster_name": "dusk",
+                                         "cluster_config": "slurm.yaml",
+                                         "advanced_argument_conversion": "yes"})
+    monkeypatch.syspath_prepend(str(result.project))
+    from CookieCutter import CookieCutter
+    assert CookieCutter.SBATCH_DEFAULTS == "account=foo"
+    assert CookieCutter.CLUSTER_NAME == "dusk"
+    assert CookieCutter.CLUSTER_CONFIG == "slurm.yaml"
+    assert CookieCutter.get_cluster_option() == "--cluster=dusk"
+    assert CookieCutter.get_advanced_argument_conversion() is True
+    sys.modules.pop("CookieCutter")
