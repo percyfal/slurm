@@ -8,9 +8,9 @@ import slurm_utils
 from CookieCutter import CookieCutter
 
 # cookiecutter arguments
-SBATCH_DEFAULTS = CookieCutter.get_sbatch_defaults()
+SBATCH_DEFAULTS = CookieCutter.SBATCH_DEFAULTS
 CLUSTER = CookieCutter.get_cluster_option()
-CLUSTER_CONFIG = CookieCutter.get_cluster_config()
+CLUSTER_CONFIG = CookieCutter.CLUSTER_CONFIG
 ADVANCED_ARGUMENT_CONVERSION = CookieCutter.get_advanced_argument_conversion()
 
 RESOURCE_MAPPING = {
