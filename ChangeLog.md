@@ -1,5 +1,14 @@
 # ChangeLog
 
+## 2021-03-10
+
+### Issues
+
+- serialize cookiecutter settings in json file and add CookieCutter
+  class to access config (fixes #63)
+- demote pandas import to function (addresses #64)
+- add preliminary support for suffixes when specifying memory (fixes #62)
+
 ## 2020-10-23
 
 This is a major rewrite of the testing framework, in an attempt to
