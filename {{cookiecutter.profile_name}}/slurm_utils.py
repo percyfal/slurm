@@ -321,13 +321,13 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
     if constraints:
         constraint_set = set(constraints.split(","))
     cluster = CookieCutter.get_cluster_option()
-    cmd = f"sinfo -e -o %all -p {partition} {cluster} | grep -v \"^CLUSTER:\"".split()
+    cmd = f"sinfo -e -o %all -p {partition} {cluster}".split()
     try:
         output = sp.Popen(" ".join(cmd), shell=True, stdout=sp.PIPE).communicate()
     except Exception as e:
         print(e)
         raise
-    data = re.sub(" \\|", "|", output[0].decode())
+    data = re.sub("^CLUSTER:.+\n", "", re.sub(" \\|", "|", output[0].decode()))
     df = pd.read_csv(StringIO(data), sep="|")
     try:
         df["TIMELIMIT_MINUTES"] = df["TIMELIMIT"].apply(time_to_minutes)
