@@ -321,7 +321,7 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
     if constraints:
         constraint_set = set(constraints.split(","))
     cluster = CookieCutter.get_cluster_option()
-    cmd = f"sinfo -e -o %all -p {partition} {cluster}".split()
+    cmd = f"sinfo -e -o %all -p {partition} {cluster} | grep -v \"^CLUSTER:\"".split()
     try:
         output = sp.Popen(" ".join(cmd), shell=True, stdout=sp.PIPE).communicate()
     except Exception as e:
