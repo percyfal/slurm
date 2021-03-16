@@ -327,7 +327,7 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
     except Exception as e:
         print(e)
         raise
-    data = re.sub(" \\|", "|", output[0].decode())
+    data = re.sub("^CLUSTER:.+\n", "", re.sub(" \\|", "|", output[0].decode()))
     df = pd.read_csv(StringIO(data), sep="|")
     try:
         df["TIMELIMIT_MINUTES"] = df["TIMELIMIT"].apply(time_to_minutes)
