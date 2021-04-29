@@ -22,8 +22,14 @@ def mock_cookiecutter_cluster_option(monkeypatch):
 
 
 @pytest.fixture
+def mock_cookiecutter_named_cluster_option(monkeypatch):
+    def cluster_option():
+        return "--cluster=linux"
+    monkeypatch.setattr(CookieCutter, "get_cluster_option", cluster_option)
+
+
+@pytest.fixture
 def mock_get_cluster_config(smk_runner,
-                            mock_cookiecutter_cluster_option,
                             monkeypatch):
     if isinstance(smk_runner._container, Container):
         class MockPopen:
@@ -38,7 +44,6 @@ def mock_get_cluster_config(smk_runner,
 
 @pytest.fixture
 def mock_get_default_partition(smk_runner,
-                               mock_cookiecutter_cluster_option,
                                monkeypatch):
     if isinstance(smk_runner._container, Container):
         def mock_res(cmd, **kwargs):
@@ -60,7 +65,17 @@ def test_time_to_minutes():
     assert minutes == 20
 
 
-def test_cluster_configuration(request, mock_get_cluster_config):
+def test_cluster_configuration(request,
+                               mock_get_cluster_config,
+                               mock_cookiecutter_cluster_option):
+    partition = request.config.getoption("--partition")
+    df = slurm_utils._get_cluster_configuration(partition)
+    assert re.match(r"^\d+$", str(df["TIMELIMIT_MINUTES"][0]))
+
+
+def test_named_cluster_configuration(request,
+                                     mock_get_cluster_config,
+                                     mock_cookiecutter_named_cluster_option):
     partition = request.config.getoption("--partition")
     df = slurm_utils._get_cluster_configuration(partition)
     assert re.match(r"^\d+$", str(df["TIMELIMIT_MINUTES"][0]))
@@ -68,6 +83,7 @@ def test_cluster_configuration(request, mock_get_cluster_config):
 
 def test_argument_conversion(request,
                              mock_get_cluster_config,
+                             mock_cookiecutter_cluster_option,
                              mock_get_default_partition):
     partition = request.config.getoption("--partition")
     config = slurm_utils._get_cluster_configuration(partition)
@@ -81,7 +97,8 @@ def test_argument_conversion(request,
 
 
 @pytest.mark.docker
-def test_default_partition(mock_get_default_partition):
+def test_default_partition(mock_get_default_partition,
+                           mock_cookiecutter_cluster_option):
     p = slurm_utils._get_default_partition()
     assert p == "normal"
 
