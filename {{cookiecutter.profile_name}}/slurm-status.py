@@ -66,8 +66,7 @@ elif status == "PREEMPTED":
     print("failed")
 elif status == "TIMEOUT":
     print("failed")
-# Unclear whether SUSPENDED should be treated as running or failed
 elif status == "SUSPENDED":
-    print("failed")
+    print("running")
 else:
     print("running")
