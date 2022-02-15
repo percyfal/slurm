@@ -13,7 +13,7 @@ def test_bake_project(cookies):
 
 def test_cookiecutter(cookies, monkeypatch):
     result = cookies.bake(template=str(pytest.cookie_template))
-    monkeypatch.syspath_prepend(str(result.project))
+    monkeypatch.syspath_prepend(str(result.project_path))
     from CookieCutter import CookieCutter
     assert CookieCutter.SBATCH_DEFAULTS == ""
     assert CookieCutter.CLUSTER_NAME == ""
@@ -29,7 +29,7 @@ def test_cookiecutter_extra_context(cookies, monkeypatch):
                                          "cluster_name": "dusk",
                                          "cluster_config": "slurm.yaml",
                                          "advanced_argument_conversion": "yes"})
-    monkeypatch.syspath_prepend(str(result.project))
+    monkeypatch.syspath_prepend(str(result.project_path))
     from CookieCutter import CookieCutter
     assert CookieCutter.SBATCH_DEFAULTS == "account=foo"
     assert CookieCutter.CLUSTER_NAME == "dusk"
