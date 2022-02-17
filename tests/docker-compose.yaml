@@ -1,8 +1,8 @@
 version: '3'
 services:
   snakemake:
-    image: quay.io/biocontainers/snakemake:5.32.0--0
-    hostname: ernie
+    image: quay.io/biocontainers/snakemake:6.15.5--hdfd78af_0
+    hostname: slurmctl
     command: /bin/bash
     deploy:
       resources:
@@ -18,8 +18,8 @@ services:
     volumes:
       - usr:/usr/
   slurm:
-    image: giovtorres/docker-centos7-slurm:latest
-    hostname: ernie
+    image: giovtorres/docker-centos7-slurm:20.11.8
+    hostname: slurmctl
     stdin_open: true
     tty: true
     working_dir: /tmp

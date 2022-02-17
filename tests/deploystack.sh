@@ -6,8 +6,8 @@
 DOCKER_COMPOSE=${DOCKER_COMPOSE:=docker-compose.yaml}
 
 # Images
-SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake:5.32.0--0}
-SLURM_IMAGE=${SLURM_IMAGE:=giovtorres/docker-centos7-slurm:latest}
+SNAKEMAKE_IMAGE=${SNAKEMAKE_IMAGE:=quay.io/biocontainers/snakemake:6.15.5--hdfd78af_0}
+SLURM_IMAGE=${SLURM_IMAGE:=giovtorres/docker-centos7-slurm:20.11.8}
 
 docker pull $SNAKEMAKE_IMAGE
 docker pull $SLURM_IMAGE
@@ -41,15 +41,16 @@ function add_slurm_user {
 SLURM_CONF=$(cat <<EOF
 # NEW COMPUTE NODE DEFINITIONS
 NodeName=DEFAULT Sockets=1 CoresPerSocket=2 ThreadsPerCore=2 State=UNKNOWN TmpDisk=10000
-NodeName=c[1-2] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB
-NodeName=c[3-4] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=800 Feature=fat,mem800MB
-NodeName=c[5] NodeHostName=localhost NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB
+NodeName=c1 NodeHostName=slurmctl NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB
+NodeName=c2 NodeHostName=slurmctl NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB
+NodeName=c3 NodeHostName=slurmctl NodeAddr=127.0.0.1 RealMemory=800 Feature=fat,mem800MB
+NodeName=c4 NodeHostName=slurmctl NodeAddr=127.0.0.1 RealMemory=800 Feature=fat,mem800MB
+NodeName=c5 NodeHostName=slurmctl NodeAddr=127.0.0.1 RealMemory=500 Feature=thin,mem500MB
 # NEW PARTITIONS
-PartitionName=normal Default=YES Nodes=c[1-4] Shared=NO MaxNodes=1 MaxTime=5-00:00:00 DefaultTime=5-00:00:00 State=UP DefMemPerCPU=500 OverSubscribe=NO
-PartitionName=debug  Nodes=c[5] Shared=NO MaxNodes=1 MaxTime=05:00:00 DefaultTime=05:00:00 State=UP DefMemPerCPU=500
+PartitionName=normal Default=YES Nodes=c[1-4] Shared=NO MaxNodes=1 MaxTime=5-0 DefaultTime=00:00:01 State=UP DefMemPerNode=0 OverSubscribe=NO
+PartitionName=debug  Nodes=c[5] Shared=NO MaxNodes=1 MaxTime=01:00:00 DefaultTime=00:00:01 State=UP DefMemPerNode=0 QOS=debug
 EOF
 	  )
-
 
 function modify_slurm_conf {
     container=$1
@@ -74,7 +75,7 @@ function modify_slurm_conf {
 	docker exec $container /bin/bash -c 'sacctmgr --immediate add cluster name=linux'
 	docker exec $container supervisorctl restart slurmdbd
 	docker exec $container supervisorctl restart slurmctld
-        docker exec $container /bin/bash -c "sacctmgr --immediate add account none,test Cluster=linux Description=\"none\" Organization=\"none\""
+        docker exec $container /bin/bash -c "sacctmgr --immediate add account none,test Description=\"none\" Organization=\"none\""
 	docker exec $container sinfo
     fi
 }
