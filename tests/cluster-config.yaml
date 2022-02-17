@@ -9,3 +9,6 @@ short_queue:
 
 simemory:
   mem: 1G
+
+set_partition_in_cc:
+  partition: debug

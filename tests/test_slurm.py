@@ -99,3 +99,11 @@ def test_si_units(smk_runner, profile):
     )
     assert "Memory specification can not be satisfied" in smk_runner.output
     assert "--mem=1000" in smk_runner.output
+
+
+@pytest.mark.parametrize("cluster_config", [True, False])
+def test_partition(smk_runner, profile, cluster_config):
+    options = f"--cluster-config {smk_runner.cluster_config}" if cluster_config else ""
+    target = "partition.cc.txt" if cluster_config else "partition.resources.txt"
+    smk_runner.make_target(target, options=options, stream=False)
+    assert smk_runner.check_jobstatus("debug", "-n -o Partition")
