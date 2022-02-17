@@ -170,7 +170,16 @@ Resources specified in Snakefiles must all be in the correct
 unit/format as expected by `sbatch`. The implemented resource names
 are given (and may be adjusted) in the `slurm_utils.RESOURCE_MAPPING`
 global. This is intended for system agnostic resources such as time
-and memory.
+and memory. Currently supported resources are `time`, `mem`,
+`mem-per-cpu`, `nodes`, and `partition`. An example rule resources
+configuration follows:
+
+    rule bwa_mem:
+        resources:
+            time = "00:10:00",
+            mem = 12000,
+            partition = "debug"
+
 
 ### Advanced argument conversion (EXPERIMENTAL)
 By default, Snakefile resources are provided as-is to the sbatch

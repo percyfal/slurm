@@ -77,3 +77,16 @@ rule wildcard_job:
 rule simemory:
     output: "siunit.txt"
     shell: "touch {output}"
+
+
+rule set_partition_in_cc:
+    output: "partition.cc.txt"
+    shell:
+        "echo {resources} > {output}"
+
+rule set_partition_in_resources:
+    output: "partition.resources.txt"
+    resources:
+        partition = "debug"
+    shell:
+        "echo {resources} > {output}"
