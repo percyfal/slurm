@@ -120,7 +120,7 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
         advanced="no",
         cluster_name=None,
         cluster_config=None,
-        yamlconfig=_yamlconfig_default
+        yamlconfig=_yamlconfig_default,
     ):
         cookie_template = pjoin(os.path.abspath(pytest.dname), os.pardir)
         output_factory = tmpdir_factory.mktemp
@@ -128,7 +128,7 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
         c._new_output_dir = lambda: str(datadir)
         extra_context = {
             "sbatch_defaults": sbatch_defaults,
-            "advanced_argument_conversion": advanced
+            "advanced_argument_conversion": advanced,
         }
         if cluster_name is not None:
             extra_context["cluster_name"] = cluster_name
@@ -137,7 +137,7 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
         c.bake(extra_context=extra_context)
         config = datadir.join("slurm").join("config.yaml")
         config_d = dict(
-            [tuple(line.split(":")) for line in config.read().split("\n") if line != ""]
+            [tuple(line.split(":")) for line in config.read().split("\n") if re.search("^[a-z]", line)]
         )
         config_d.update(**yamlconfig)
         config.write("\n".join(f"{k}: {v}" for k, v in config_d.items()))
