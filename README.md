@@ -4,12 +4,14 @@
 
 This cookiecutter provides a template Snakemake profile for
 configuring Snakemake to run on the [SLURM Workload
-Manager](https://slurm.schedmd.com/). The profile defines three
-scripts
+Manager](https://slurm.schedmd.com/). The profile defines the
+following scripts
 
 1. `slurm-submit.py` - submits a jobscript to slurm
 2. `slurm-jobscript.sh` - a template jobscript
 3. `slurm-status.py` - checks the status of jobs in slurm
+4. `slurm-sidecar.py` - run a Snakemake cluster sidecar for caching
+   queries to Slurm's controller/database daemons
 
 and a configuration file `config.yaml` that defines default values for
 snakemake command line arguments. The default `config.yaml` file is
@@ -18,6 +20,7 @@ snakemake command line arguments. The default `config.yaml` file is
     jobscript: "slurm-jobscript.sh"
     cluster: "slurm-submit.py"
     cluster-status: "slurm-status.py"
+    cluster-sidecar: "slurm-sidecar.py"
     max-jobs-per-second: 1
     max-status-checks-per-second: 10
     local-cores: 1
@@ -27,7 +30,8 @@ Given an installed profile `profile_name`, when snakemake is run with
 `--profile profile_name`, the configuration above would imply the
 following snakemake call:
 
-    snakemake --jobscript slurm-jobscript.sh --cluster slurm-submit.py --cluster-status slurm-status.py --restart-times 3 --max-jobs-per-second 1 --max-status-checks-per-second 10 --local-cores 1 --latency-wait 60
+    snakemake --jobscript slurm-jobscript.sh --cluster slurm-submit.py --cluster-status slurm-status.py \
+        --restart-times 3 --max-jobs-per-second 1 --max-status-checks-per-second 10 --local-cores 1 --latency-wait 60
 
 plus any additional options to snakemake that the user has applied.
 
