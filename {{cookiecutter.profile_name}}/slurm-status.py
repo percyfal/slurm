@@ -50,7 +50,7 @@ def get_status_direct(jobid):
             else:
                 time.sleep(1)
 
-        return res[jobid] or ""
+    return res[jobid] or ""
 
 
 def get_status_sidecar(jobid):
