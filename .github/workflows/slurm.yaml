@@ -1,6 +1,6 @@
 name: Test SnakemakeProfiles/slurm
 env:
-  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:6.15.5--hdfd78af_0
+  SNAKEMAKE_IMAGE: quay.io/biocontainers/snakemake:7.3.2--hdfd78af_0
   SLURM_IMAGE: giovtorres/docker-centos7-slurm:20.11.8
   DOCKER_COMPOSE: tests/docker-compose.yaml
 
