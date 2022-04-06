@@ -23,6 +23,8 @@ if DEBUG:
 
 
 def register_with_sidecar(jobid):
+    if SIDECAR_VARS is None:
+        return
     sidecar_vars = json.loads(SIDECAR_VARS)
     url = "http://localhost:%d/job/register/%s" % (sidecar_vars["server_port"], jobid)
     logger.debug("POST to %s", url)
