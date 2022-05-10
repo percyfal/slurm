@@ -2,7 +2,9 @@ restart-times: 3
 jobscript: "slurm-jobscript.sh"
 cluster: "slurm-submit.py"
 cluster-status: "slurm-status.py"
+{%- if cookiecutter.cluster_sidecar == "yes" %}
 cluster-sidecar: "slurm-sidecar.py"
+{%- endif %}
 cluster-cancel: "scancel"
 max-jobs-per-second: 1
 max-status-checks-per-second: 10
