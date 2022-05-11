@@ -3,9 +3,9 @@ import pytest
 import time
 
 
-@pytest.fixture
-def profile(cookie_factory, data):
-    cookie_factory()
+@pytest.fixture(params=["yes", "no"])
+def profile(cookie_factory, data, request):
+    cookie_factory(cluster_sidecar=request.param)
 
 
 @pytest.mark.slow
