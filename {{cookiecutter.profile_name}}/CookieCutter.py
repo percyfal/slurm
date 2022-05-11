@@ -21,3 +21,11 @@ class CookieCutter:
         if cluster != "":
             return f"--cluster={cluster}"
         return ""
+
+    @staticmethod
+    def get_cluster_logpath() -> str:
+        return "{{cookiecutter.cluster_logpath}}"
+
+    @staticmethod
+    def get_cluster_jobname() -> str:
+        return "{{cookiecutter.cluster_jobname}}"

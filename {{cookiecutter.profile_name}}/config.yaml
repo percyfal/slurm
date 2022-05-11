@@ -1,15 +1,19 @@
-restart-times: 3
-jobscript: "slurm-jobscript.sh"
-cluster: "slurm-submit.py"
-cluster-status: "slurm-status.py"
 {%- if cookiecutter.cluster_sidecar == "yes" %}
 cluster-sidecar: "slurm-sidecar.py"
 {%- endif %}
 cluster-cancel: "scancel"
-max-jobs-per-second: 1
-max-status-checks-per-second: 10
+restart-times: "{{cookiecutter.restart_times}}"
+jobscript: "slurm-jobscript.sh"
+cluster: "slurm-submit.py"
+cluster-status: "slurm-status.py"
+max-jobs-per-second: "{{cookiecutter.max_jobs_per_second}}"
+max-status-checks-per-second: "{{cookiecutter.max_status_checks_per_second}}"
 local-cores: 1
-latency-wait: 60
+latency-wait: "{{cookiecutter.latency_wait}}"
+use-conda: "{{cookiecutter.use_conda}}"
+use-singularity: "{{cookiecutter.use_singularity}}"
+jobs: "{{cookiecutter.jobs}}"
+printshellcmds: "{{cookiecutter.print_shell_commands}}"
 
 # Example resource configuration
 # default-resources:
