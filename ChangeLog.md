@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 2022-05-12
+
+### Changes
+
+- add support for sidecar (PR #85)
+
 ## 2021-03-10
 
 ### Issues
