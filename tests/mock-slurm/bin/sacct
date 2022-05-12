@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+
+cat <"EOF"
+1044785|RUNNING|0:0
+1044785.extern|RUNNING|0:0
+1044785.0|RUNNING|0:0
+EOF

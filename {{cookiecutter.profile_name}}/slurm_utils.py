@@ -28,10 +28,7 @@ def _convert_units_to_mb(memory):
     m = regex.match(memory)
     if m is None:
         logger.error(
-            (
-                f"unsupported memory specification '{memory}';"
-                "  allowed suffixes: [K|M|G|T]"
-            )
+            (f"unsupported memory specification '{memory}';" "  allowed suffixes: [K|M|G|T]")
         )
         sys.exit(1)
     factor = siunits[m.group(2)]
@@ -113,21 +110,15 @@ def format_wildcards(string, job_properties):
     else:
         job._format_wildcards = None
     _variables = dict()
-    _variables.update(
-        dict(params=job._format_params, wildcards=job._format_wildcards)
-    )
+    _variables.update(dict(params=job._format_params, wildcards=job._format_wildcards))
     if hasattr(job, "rule"):
         _variables.update(dict(rule=job.rule))
     try:
         return format(string, **_variables)
     except NameError as ex:
-        raise WorkflowError(
-            "NameError with group job {}: {}".format(job.jobid, str(ex))
-        )
+        raise WorkflowError("NameError with group job {}: {}".format(job.jobid, str(ex)))
     except IndexError as ex:
-        raise WorkflowError(
-            "IndexError with group job {}: {}".format(job.jobid, str(ex))
-        )
+        raise WorkflowError("IndexError with group job {}: {}".format(job.jobid, str(ex)))
 
 
 # adapted from ClusterExecutor.cluster_params function in snakemake.executor
@@ -243,9 +234,7 @@ def advanced_argument_conversion(arg_dict):
         runtime = time_to_minutes(runtime)
         time_limit = max(config["TIMELIMIT_MINUTES"])
         if runtime > time_limit:
-            logger.info(
-                f"time (runtime) > time limit {time_limit}; " "adjusting time down"
-            )
+            logger.info(f"time (runtime) > time limit {time_limit}; " "adjusting time down")
             adjusted_args["time"] = time_limit
 
     # update and return
@@ -313,8 +302,7 @@ def _get_cluster_configuration(partition, constraints=None, memory=0):
         import pandas as pd
     except ImportError:
         print(
-            "Error: currently advanced argument conversion "
-            "depends on 'pandas'.", file=sys.stderr
+            "Error: currently advanced argument conversion " "depends on 'pandas'.", file=sys.stderr
         )
         sys.exit(1)
 

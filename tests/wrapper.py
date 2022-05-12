@@ -115,7 +115,7 @@ class SnakemakeRunner:
         cmd = (
             f"{self.exe} -c '{self.pp} && "
             + f"{self.snakemake} -s {self.snakefile} "
-            + f"{options} --nolock "
+            + f"{options} --nolock --default-resources mem_mb=100 "
             + f"-j {self._num_cores} {self.workdir} {force} {target} {prof} {jn}'"
         )
 

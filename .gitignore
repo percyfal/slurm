@@ -1,2 +1,9 @@
 __pycache__
 .pytest
+
+# pycharm
+.idea/
+
+# text editors
+*.sw?
+*~

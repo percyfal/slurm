@@ -4,13 +4,18 @@ import time
 
 
 @pytest.fixture
-def profile(cookie_factory, data):
+def profile(cookie_factory, data, request):
     cookie_factory()
+
+
+@pytest.fixture(params=["yes", "no"])
+def sidecar_profile(cookie_factory, data, request):
+    cookie_factory(cluster_sidecar=request.param)
 
 
 @pytest.mark.slow
 @pytest.mark.skipci
-def test_no_timeout(smk_runner, profile):
+def test_no_timeout(smk_runner, sidecar_profile):
     """Test that rule that updates runtime doesn't timeout"""
     smk_runner.make_target("timeout.txt")
     assert "Trying to restart" in smk_runner.output
@@ -19,7 +24,7 @@ def test_no_timeout(smk_runner, profile):
 
 
 @pytest.mark.slow
-def test_timeout(smk_runner, profile):
+def test_timeout(smk_runner, sidecar_profile):
     """Test that rule excessive runtime resources times out"""
     opts = (
         f'--cluster "sbatch --parsable -p {smk_runner.partition} {pytest.account} '
@@ -32,7 +37,7 @@ def test_timeout(smk_runner, profile):
     assert smk_runner.check_jobstatus("TIMEOUT|NODE_FAIL")
 
 
-def test_profile_status_running(smk_runner, profile):
+def test_profile_status_running(smk_runner, sidecar_profile):
     """Test that slurm-status.py catches RUNNING status"""
     opts = (
         f'--cluster "sbatch --parsable -p {smk_runner.partition}'

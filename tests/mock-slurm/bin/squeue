@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+
+cat <<"EOF"
+JOBID,STATE
+1044785,RUNNING
+1044875,RUNNING
+EOF

@@ -3,8 +3,15 @@ import sys
 import pytest
 
 
-def test_bake_project(cookies):
-    result = cookies.bake(template=str(pytest.cookie_template))
+@pytest.mark.parametrize("sidecar", ["yes", "no"])
+def test_bake_project(cookies, sidecar):
+    result = cookies.bake(template=str(pytest.cookie_template),
+                          extra_context={"cluster_sidecar": sidecar})
+    cfg = result.project / "config.yaml"
+    if sidecar == "yes":
+        assert "cluster-sidecar: \"slurm-sidecar.py\"\n" in cfg.readlines()
+    else:
+        assert "cluster-sidecar: \"slurm-sidecar.py\"" not in cfg.readlines()
     assert result.exit_code == 0
     assert result.exception is None
     assert result.project.basename == "slurm"
