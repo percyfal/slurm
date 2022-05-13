@@ -281,11 +281,11 @@ specified as `time="4h30m"`.
 
 Supported (case-insensitive) time units are:
 
--   `w`: week
--   `d`: day
--   `h`: hour
--   `m`: minute
--   `s`: second
+- `w`: week
+- `d`: day
+- `h`: hour
+- `m`: minute
+- `s`: second
 
 However, you may also pass the time in the [slurm
 format](https://slurm.schedmd.com/sbatch.html#OPT_time).
@@ -323,7 +323,7 @@ from the source code root directory. Test options can be configured via
 the pytest configuration file `tests/pytest.ini`.
 
 Test dependencies are listed in `test-environment.yml` and can be
-installed in e.g. a conda environment.
+installed in e.g. a conda environment.
 
 ### Testing on a HPC running SLURM
 
@@ -342,8 +342,8 @@ For local testing the test suite will deploy a docker stack
 `cookiecutter-slurm` that runs two services based on the following
 images:
 
-1.  [quay.io/biocontainers/snakemake](https://quay.io/repository/biocontainers/snakemake?tab=tags)
-2.  [giovtorres/docker-centos7-slurm](https://github.com/giovtorres/docker-centos7-slurm)
+1. [quay.io/biocontainers/snakemake](https://quay.io/repository/biocontainers/snakemake?tab=tags)
+2. [giovtorres/docker-centos7-slurm](https://github.com/giovtorres/docker-centos7-slurm)
 
 The docker stack will be automatically deployed provided that the user
 has installed docker and enabled [docker

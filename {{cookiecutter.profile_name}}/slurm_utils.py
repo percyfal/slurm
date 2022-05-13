@@ -95,7 +95,7 @@ def format(_pattern, _quote_all=False, **kwargs):  # noqa: A001
 
 #  adapted from Job.format_wildcards in snakemake.jobs
 def format_wildcards(string, job_properties):
-    """ Format a string with variables from the job. """
+    """Format a string with variables from the job."""
 
     class Job(object):
         def __init__(self, job_properties):
@@ -263,7 +263,7 @@ class Time:
         "d": _day_size,
         "w": _week_size,
     }
-    pattern = re.compile(rf'(?P<val>\d+(\.\d*)?|\.\d+)(?P<unit>[a-zA-Z])')
+    pattern = re.compile(rf"(?P<val>\d+(\.\d*)?|\.\d+)(?P<unit>[a-zA-Z])")
 
     def __init__(self, duration: str):
         self.duration = Time._from_str(duration)
@@ -301,7 +301,8 @@ class Time:
             unit = m.group("unit").lower()
             if unit not in Time.units:
                 raise InvalidTimeUnitError(
-                    "Unknown unit '{}' in time {}".format(unit, duration))
+                    "Unknown unit '{}' in time {}".format(unit, duration)
+                )
 
             total += float(value) * Time.units[unit]
 
