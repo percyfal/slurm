@@ -7,15 +7,15 @@ import pytest
 def test_bake_project(cookies, sidecar):
     result = cookies.bake(template=str(pytest.cookie_template),
                           extra_context={"cluster_sidecar": sidecar})
-    cfg = result.project / "config.yaml"
+    cfg = result.project_path / "config.yaml"
     if sidecar == "yes":
-        assert "cluster-sidecar: \"slurm-sidecar.py\"\n" in cfg.readlines()
+        assert "cluster-sidecar: \"slurm-sidecar.py\"\n" in cfg.read_text()
     else:
-        assert "cluster-sidecar: \"slurm-sidecar.py\"" not in cfg.readlines()
+        assert "cluster-sidecar: \"slurm-sidecar.py\"" not in cfg.read_text()
     assert result.exit_code == 0
     assert result.exception is None
-    assert result.project.basename == "slurm"
-    assert result.project.isdir()
+    assert result.project_path.name == "slurm"
+    assert result.project_path.is_dir()
 
 
 def test_cookiecutter(cookies, monkeypatch):
