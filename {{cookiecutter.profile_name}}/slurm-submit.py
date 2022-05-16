@@ -36,7 +36,6 @@ def register_with_sidecar(jobid):
 SBATCH_DEFAULTS = CookieCutter.SBATCH_DEFAULTS
 CLUSTER = CookieCutter.get_cluster_option()
 CLUSTER_CONFIG = CookieCutter.CLUSTER_CONFIG
-ADVANCED_ARGUMENT_CONVERSION = CookieCutter.get_advanced_argument_conversion()
 
 RESOURCE_MAPPING = {
     "time": ("time", "runtime", "walltime"),
@@ -69,11 +68,7 @@ sbatch_options.update(cluster_config.get(job_properties.get("rule"), {}))
 # 5) cluster_config options
 sbatch_options.update(job_properties.get("cluster", {}))
 
-# 6) Advanced conversion of parameters
-if ADVANCED_ARGUMENT_CONVERSION:
-    sbatch_options = slurm_utils.advanced_argument_conversion(sbatch_options)
-
-# 7) Format pattern in snakemake style
+# 6) Format pattern in snakemake style
 sbatch_options = slurm_utils.format_values(sbatch_options, job_properties)
 
 # ensure sbatch output dirs exist

@@ -99,9 +99,10 @@ account:
     $ cookiecutter https://github.com/Snakemake-Profiles/slurm.git
     profile_name [slurm]: slurm.my_account
     sbatch_defaults []: account=my_account no-requeue exclusive
-    Select advanced_argument_conversion:
-    1 - no
-    2 - yes
+	cluster_sidecar_help: [Use cluster sidecar. NB! Requires snakemake >= 7.0! Enter to continue...]
+    Select cluster_sidecar:
+    1 - yes
+    2 - no
     Choose from 1, 2 [1]:
     cluster_name []:
     cluster_config_help: [The use of cluster-config is discouraged. Rather, set snakemake CLI options in the profile configuration file (see snakemake documentation on best practices). Enter to continue...]
@@ -122,9 +123,10 @@ create a profile that uses a specified cluster:
     $ cookiecutter slurm
     profile_name [slurm]: slurm.dusk
     sbatch_defaults []: account=my_account
-    Select advanced_argument_conversion:
-    1 - no
-    2 - yes
+	cluster_sidecar_help: [Use cluster sidecar. NB! Requires snakemake >= 7.0! Enter to continue...]
+    Select cluster_sidecar:
+    1 - yes
+    2 - no
     Choose from 1, 2 [1]:
     cluster_name []: dusk
     cluster_config_help: [The use of cluster-config is discouraged. Rather, set snakemake CLI options in the profile configuration file (see snakemake documentation on best practices). Enter to continue...]
@@ -139,27 +141,6 @@ with `sbatch --parsable --account=my_account --cluster=dusk`. In
 addition, the `slurm-status.py` script will check for jobs in the
 `dusk` cluster job queue.
 
-### Example 3: project setup using advanced argument conversion (WARNING: experimental feature!)
-
-As a final example, assume we want to use advanced argument
-conversion:
-
-    $ cookiecutter slurm
-    profile_name [slurm]: slurm.convert_args
-    sbatch_defaults []: account=my_account
-    Select advanced_argument_conversion:
-    1 - no
-    2 - yes
-    Choose from 1, 2 [1]: 2
-    cluster_name []:
-    cluster_config_help: [The use of cluster-config is discouraged. Rather, set snakemake CLI options in the profile configuration file (see snakemake documentation on best practices). Enter to continue...]
-    cluster_config []:
-
-The command `snakemake --profile slurm.convert_args ...` will now
-submit jobs with `sbatch --parsable --account=my_account`. The
-advanced argument conversion feature will attempt to adjust memory
-settings and number of cpus to comply with the cluster configuration.
-See the section below
 
 ## Profile details
 
@@ -169,11 +150,6 @@ See the section below
   Snakemake option.
 * `sbatch_defaults` : List of default arguments to sbatch, e.g.:
   `qos=short time=60`.
-* `advanced_argument_conversion` : If True, try to adjust/constrain
-  mem, time, nodes and ntasks (i.e. cpus) to parsed or default
-  partition after converting resources. This may fail due to
-  heterogeneous slurm setups, i.e. code adjustments will likely be
-  necessary.
 * `cluster_name` : some HPCs define multiple SLURM clusters. Set the
   cluster name, leave empty to use the default. This will add the
   `--cluster` string to the sbatch defaults, and adjust
@@ -208,7 +184,7 @@ names](https://slurm.schedmd.com/sbatch.html):
 4) Profile `cluster_config` file <rulename> entries
 5) `--cluster-config` parsed to Snakemake (deprecated since Snakemake 5.10)
 6) Snakemake CLI resource configuration in profile configuration file
-7) Any other argument conversion (experimental, currently time, ntasks and mem) if `advanced_argument_conversion` is True.
+
 
 ### Rule specific resource configuration
 In addition to Snakemake CLI resource configuration, resources can be
@@ -226,39 +202,6 @@ configuration follows:
             mem = 12000,
             partition = "debug"
 
-
-### Advanced argument conversion (EXPERIMENTAL)
-By default, Snakefile resources are provided as-is to the sbatch
-submission step. Although `sbatch` does adjust options to match
-cluster configuration, it will throw an error if resources exceed
-available cluster resources. For instance, if the memory is set larger
-than the maximum memory of any node, `sbatch` will exit with the
-message
-
-    sbatch: error: CPU count per node can not be satisfied
-    sbatch: error: Batch job submission failed: Requested node configuration is not available
-
-By choosing the advanced argument conversion upon creating a profile,
-an attempt will be made to adjust memory, cpu and time settings if
-these do not comply with the cluster configuration. As an example,
-consider a rule with the following resources and threads:
-
-    rule bwa_mem:
-        resources:
-            mem_mb = lambda wildcards, attempt: attempt * 8000,
-            runtime = lambda wildcards, attempt: attempt * 1200
-        threads: 1
-
-Assume further that the available cores provide 6400MB memory per
-core. If the job reaches a peak memory (8000MB), it will likely be
-terminated. The advanced argument conversion will compare the
-requested memory requirements to those available (defined as memory
-per cpu times number of requested cpus) and adjust the number of cpus
-accordingly.
-
-Other checks are also performed to make sure memory, runtime, and
-number of cpus don't exceed the maximum values specificed by the
-cluster configuration.
 
 
 ### Cluster configuration file
@@ -347,22 +290,24 @@ copies any user-provided data file to the test directory. Finally, the
 `smk_runner` fixture provides an instance of the
 `tests/wrapper.SnakemakeRunner` class for running Snakemake tests.
 
-As an example, `tests/test_slurm_advanced.py` defines a fixture
-`profile` that uses the `cookie_factory` fixture factory to create an
-slurm profile that uses advanced argument conversion:
+As an example, `tests/test_slurm.py` defines a fixture
+`sidecar_profile` that uses the `cookie_factory` fixture factory to
+create an slurm profile that parametrizes use of sidecar argument:
 
-    @pytest.fixture
-    def profile(cookie_factory, data):
-        cookie_factory(advanced="yes")
+	@pytest.fixture(params=["yes", "no"])
+	def sidecar_profile(cookie_factory, data, request):
+		cookie_factory(cluster_sidecar=request.param)
 
-The test `tests/test_slurm_advanced.py::test_adjust_runtime` depends
+The test `tests/test_slurm.py::test_profile_status_running` depends
 on this fixture and `smk_runner`:
 
-    def test_adjust_runtime(smk_runner, profile):
-        smk_runner.make_target(
-            "timeout.txt", options=f"--cluster-config {smk_runner.cluster_config}"
-        )
-
+	def test_profile_status_running(smk_runner, sidecar_profile):
+		"""Test that slurm-status.py catches RUNNING status"""
+		...
+		smk_runner.make_target(
+			"timeout.txt", options=opts, profile=None, asynchronous=True
+		)  # noqa: E501
+		...
 
 The `make_target` method makes a snakemake target with additional
 options passed to Snakemake.
