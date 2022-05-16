@@ -4,6 +4,7 @@
 
 ### Changes
 
+- deprecate advanced argument conversion (#91, PR #93)
 - add support for sidecar (PR #85)
 
 ## 2021-03-10

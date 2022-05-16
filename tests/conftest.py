@@ -99,7 +99,6 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
 
     Args:
       sbatch_defaults (str): sbatch defaults for cookie
-      advanced (str): use advanced argument conversion ("no" or "yes")
       cluster_sidecar (str): use sidecar to monitor job status
       cluster_name (str): set cluster name
       cluster_config (str): cluster configuration file
@@ -118,7 +117,6 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
 
     def _cookie_factory(
         sbatch_defaults=_sbatch_defaults,
-        advanced="no",
         cluster_sidecar="yes",
         cluster_name=None,
         cluster_config=None,
@@ -130,7 +128,6 @@ def cookie_factory(tmpdir_factory, _cookiecutter_config_file, datadir):
         c._new_output_dir = lambda: str(datadir)
         extra_context = {
             "sbatch_defaults": sbatch_defaults,
-            "advanced_argument_conversion": advanced,
             "cluster_sidecar": cluster_sidecar,
         }
         if cluster_name is not None:

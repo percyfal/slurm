@@ -1,7 +1,6 @@
 {
     "profile_name": "slurm",
     "sbatch_defaults": "",
-    "advanced_argument_conversion": ["no", "yes"],
     "cluster_sidecar_help": "Use cluster sidecar. NB! Requires snakemake >= 7.0! Enter to continue...",
     "cluster_sidecar": ["yes", "no"],
     "cluster_name": "",
