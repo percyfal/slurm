@@ -71,11 +71,7 @@ def get_status_sidecar(jobid):
         return get_status_direct(jobid)
 
 
-# need to support quoted and unquoted jobid
-# see https://github.com/Snakemake-Profiles/lsf/issues/45
-split_args = shlex.split(" ".join(sys.argv[1:]))
-jobid = split_args[0]
-# outlog = split_args[1]
+jobid = sys.argv[1]
 
 if SIDECAR_VARS:
     logger.debug("slurm-status.py: querying sidecar")
