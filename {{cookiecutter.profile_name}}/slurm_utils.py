@@ -6,6 +6,7 @@ import re
 import math
 import argparse
 import subprocess as sp
+import shlex
 from io import StringIO
 
 from snakemake import io
@@ -44,7 +45,7 @@ def parse_jobscript():
 
 def parse_sbatch_defaults(parsed):
     """Unpack SBATCH_DEFAULTS."""
-    d = parsed.split() if type(parsed) == str else parsed
+    d = shlex.split(parsed) if type(parsed) == str else parsed
     args = {}
     for keyval in [a.split("=") for a in d]:
         k = keyval[0].strip().strip("-")
