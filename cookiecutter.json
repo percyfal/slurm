@@ -12,8 +12,8 @@
     "cluster_sidecar_help": "Use cluster sidecar. NB! Requires snakemake >= 7.0! Enter to continue...",
     "cluster_sidecar": ["yes", "no"],
     "cluster_name": "",
-    "cluster_jobname": "",
-    "cluster_logpath": "",
+    "cluster_jobname": "%r_%w",
+    "cluster_logpath": "logs/slurm/%r/%j-%w",
     "cluster_config_help": "The use of cluster-config is discouraged. Rather, set snakemake CLI options in the profile configuration file (see snakemake documentation on best practices). Enter to continue...",
     "cluster_config": ""
 }

@@ -186,13 +186,13 @@ cluster job queue.
   `slurm-status.py` to check status on the relevant cluster.
 - `cluster_jobname`: A pattern to use for naming Slurm
   jobs ([`--job-name`](https://slurm.schedmd.com/sbatch.html#OPT_job-name)).
-  See [Patterns](#patterns) below. Leave blank to use the slurm default.
+  See [Patterns](#patterns) below. Set to `"""` (i.e., blank) to use the slurm default.
 - `cluster_logpath`: A pattern to use for setting
   the [`--output`](https://slurm.schedmd.com/sbatch.html#OPT_output)
   and [`--error`](https://slurm.schedmd.com/sbatch.html#OPT_error) log files. You can
   use [slurm filename patterns](https://slurm.schedmd.com/sbatch.html#lbAH)
-  and [Patterns](#patterns). Leave blank to use the slurm default. For
-  example, `logs/slurm/%r-%i` creates logs named `%r-%i.out` and `%r-%i.err` in the
+  and [Patterns](#patterns). Set to `"""` (i.e., blank) to use the slurm default. For
+  example, `logs/slurm/%r_%w` creates logs named `%r_%w.out` and `%r_%w.err` in the
   directory `logs/slurm`.
 - `cluster_config` (NB: discouraged): Path to a YAML or JSON
   configuration file analogues to the Snakemake [`--cluster-config`
