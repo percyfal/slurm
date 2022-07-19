@@ -141,7 +141,7 @@ class PollSqueueThread(threading.Thread):
         """Run the call to ``squeue``"""
         cluster = CookieCutter.get_cluster_option()
         try_num = 0
-        cmd = [SQUEUE_CMD, "--me", "--format=%i,%T", "--state=all"]
+        cmd = [SQUEUE_CMD, "--user={}".format(os.environ.get("USER")), "--format=%i,%T", "--state=all"]
         if cluster:
             cmd.append(cluster)
         while try_num < self.max_tries:
