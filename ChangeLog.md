@@ -1,5 +1,21 @@
 # ChangeLog
 
+## 2022-05-18
+
+### Added
+- Human-friendly time formatting
+- Common snakemake options to cookiecutter JSON [[#80][80]]
+  - `--use-singularity`
+  - `--use-conda`
+  - `--printshellcmds`
+  - `--latency-wait`
+  - `--max-jobs-per-second`
+  - `--max-status-checks-per-second`
+  - `--restart-times`
+- Support for passing extra options to `sbatch` via the `slurm` parameter in a rule's `resources` [[#86][86]]
+- More control over job names and log paths with patterns
+- Print the job log path along with the job ID
+
 ## 2022-05-12
 
 ### Changes
@@ -79,3 +95,7 @@ Move CI infrastructure from circleCI to github actions.
 - add advanced slurm-submit file
 - adjust resource requirements if they exceed partition configuration
   settings (#11)
+
+
+[80]: https://github.com/Snakemake-Profiles/slurm/issues/80
+[86]: https://github.com/Snakemake-Profiles/slurm/issues/86
