@@ -10,6 +10,8 @@ from os.path import dirname
 from time import time as unix_time
 from typing import Union
 from uuid import uuid4
+import shlex
+from io import StringIO
 
 from CookieCutter import CookieCutter
 from snakemake import io
@@ -46,7 +48,7 @@ def parse_jobscript():
 
 def parse_sbatch_defaults(parsed):
     """Unpack SBATCH_DEFAULTS."""
-    d = parsed.split() if type(parsed) == str else parsed
+    d = shlex.split(parsed) if type(parsed) == str else parsed
     args = {}
     for keyval in [a.split("=") for a in d]:
         k = keyval[0].strip().strip("-")
