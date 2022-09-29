@@ -39,8 +39,10 @@ import uuid
 from CookieCutter import CookieCutter
 
 
-#: Enables debug messages for slurm sidecard.
+#: Enables debug messages for slurm sidecar.
 DEBUG = bool(int(os.environ.get("SNAKEMAKE_SLURM_DEBUG", "0")))
+#: Enables HTTP request logging in sidecar.
+LOG_REQUESTS = bool(int(os.environ.get("SNAKEMAKE_SLURM_LOG_REQUESTS", "0")))
 #: Command to call when calling squeue
 SQUEUE_CMD = os.environ.get("SNAKEMAKE_SLURM_SQUEUE_CMD", "squeue")
 #: Number of seconds to wait between ``squeue`` calls.
@@ -246,6 +248,10 @@ class JobStateHttpHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         logger.debug("--- END POST")
+
+    def log_request(self, *args, **kwargs):
+        if LOG_REQUESTS:
+            super().log_request(*args, **kwargs)
 
 
 class JobStateHttpServer(http.server.HTTPServer):

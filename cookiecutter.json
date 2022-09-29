@@ -1,9 +1,19 @@
 {
     "profile_name": "slurm",
+    "use_singularity": [false, true],
+    "use_conda": [false, true],
+    "jobs": 500,
+    "restart_times": 0,
+    "max_status_checks_per_second": 10,
+    "max_jobs_per_second": 10,
+    "latency_wait": 5,
+    "print_shell_commands": [false, true],
     "sbatch_defaults": "",
     "cluster_sidecar_help": "Use cluster sidecar. NB! Requires snakemake >= 7.0! Enter to continue...",
     "cluster_sidecar": ["yes", "no"],
     "cluster_name": "",
+    "cluster_jobname": "%r_%w",
+    "cluster_logpath": "logs/slurm/%r/%j-%w",
     "cluster_config_help": "The use of cluster-config is discouraged. Rather, set snakemake CLI options in the profile configuration file (see snakemake documentation on best practices). Enter to continue...",
     "cluster_config": ""
 }
